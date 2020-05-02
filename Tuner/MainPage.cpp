@@ -5,6 +5,7 @@
 using namespace std;
 using namespace winrt;
 using namespace Windows::UI::Xaml;
+using namespace Windows::Foundation;
 
 namespace winrt::Tuner::implementation
 {
@@ -30,7 +31,7 @@ namespace winrt::Tuner::implementation
 		reinterpret_cast<MainPage*>(instance)->UpdateTunerScreenAsync(note, inaccuracy, frequency);
 	}
 
-	Windows::Foundation::IAsyncAction MainPage::UpdateTunerScreenAsync(string& note, float inaccuracy, float frequency)
+	IAsyncAction MainPage::UpdateTunerScreenAsync(string& note, float inaccuracy, float frequency)
 	{
 		co_await winrt::resume_foreground(Note_TextBlock().Dispatcher());
 

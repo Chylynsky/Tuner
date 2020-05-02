@@ -10,7 +10,7 @@ using namespace winrt::Windows::Media::Audio;
 using namespace winrt::Windows::Media::Capture;
 using namespace winrt::Windows::Devices::Enumeration;
 using namespace winrt::Windows::Media::MediaProperties;
-
+/*
 // Get an instance of AudioInput class
 void AudioInput::Initialize()
 {
@@ -28,10 +28,8 @@ void AudioInput::Initialize()
 		{
 			// Get created graph
 			audioGraph = asyncInfo.GetResults().Graph();
-
 			// Create output node for recorded data
 			frameOutputNode = audioGraph.CreateFrameOutputNode();
-
 			// Attach callback
 			audioGraph.QuantumStarted([&](AudioGraph const& sender, IInspectable const args) { audioGraph_QuantumStarted(sender, args); });
 
@@ -53,6 +51,41 @@ void AudioInput::Initialize()
 			});
 		}
 	});
+}*/
+
+// Get an instance of AudioInput class
+IAsyncAction AudioInput::Initialize()
+{
+	audioSettings = AudioGraphSettings(Render::AudioRenderCategory::Media);
+	// Start async operation that creates new audio graph
+	CreateAudioGraphResult graphCreation{ co_await AudioGraph::CreateAsync(audioSettings) };
+
+	// Check if succesfully created
+	if (graphCreation.Status() != AudioGraphCreationStatus::Success)
+		throw runtime_error("AudioGraph creation failed.");
+	else
+	{
+		// Get created graph
+		audioGraph = graphCreation.Graph();
+		// Create output node for recorded data
+		frameOutputNode = audioGraph.CreateFrameOutputNode();
+		// Attach callback
+		audioGraph.QuantumStarted({ this, &AudioInput::audioGraph_QuantumStarted });
+
+		// Start audio input device node creation
+		CreateAudioDeviceInputNodeResult nodeCreation{ co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media) };
+
+		// Check if succesful
+		if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success)
+			throw runtime_error("AudioDeviceInputNode creation failed.");
+		else
+		{
+			inputDevice = nodeCreation.DeviceInputNode();
+			// Input from the recording device is routed to frameOutputNode
+			inputDevice.AddOutgoingConnection(frameOutputNode);
+			audioGraph.Start();
+		}
+	}
 }
 
 // Get the number of recorded samples

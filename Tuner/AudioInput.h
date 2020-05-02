@@ -24,7 +24,7 @@ public:
 	~AudioInput();
 
 	// Get an instance of AudioInput class
-	void Initialize();
+	winrt::Windows::Foundation::IAsyncAction Initialize();
 	// Get the number of recorded samples
 	size_t RecordedDataSize();
 	// Get current sample rate

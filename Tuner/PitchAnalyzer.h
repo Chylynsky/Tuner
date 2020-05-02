@@ -24,7 +24,7 @@ class PitchAnalyzer
 	std::vector<std::complex<float>> fftResult;
 	// Frequency of the highest amplitude
 	float firstHarmonic;
-
+	// Difference between a signal frequency and 
 	float inaccuracy;
 
 	std::string note;
@@ -32,7 +32,7 @@ class PitchAnalyzer
 	fftwf_plan fftPlan;
 	std::atomic<bool> quit;
 
-	// Analyzes input container of std::complex<T>, being the result of DFT. Returns frequency with the highest amplitude.
+	// Analyzes input container of std::complex<T>, being the result of FFT. Returns frequency with the highest amplitude.
 	// Requires iterators and the sampling frequency of the analysed signal.
 	template<typename iterator>
 	void GetFirstHarmonic(iterator first, iterator last, unsigned int sampling_freq)
@@ -62,7 +62,7 @@ class PitchAnalyzer
 
 public:
 
-	PitchAnalyzer(float A4 = 440.0f, float minFrequency = 15.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 15);
+	PitchAnalyzer(float A4 = 440.0f, float minFrequency = 20.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 15);
 	~PitchAnalyzer();
 
 	void Run(void* instance = nullptr, void (*callback)(void*, std::string&, float, float) = nullptr);

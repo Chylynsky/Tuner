@@ -3,9 +3,24 @@
 
 void PitchAnalyzer::GetNote(float frequency)
 {
+	// Get the nearest note above or equal
 	auto high = noteFrequencies.lower_bound(frequency);
+	// Get the nearest note below
 	auto low = std::prev(high);
-	return;
+
+	float highDiff = (*high).first - frequency;
+	float lowDiff = frequency - (*low).first;
+
+	if (highDiff < lowDiff)
+	{
+		inaccuracy = highDiff;
+		note = (*high).second;
+	}
+	else
+	{
+		inaccuracy = -lowDiff;
+		note = (*low).second;
+	}
 }
 
 void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&, float, float))
@@ -28,7 +43,7 @@ void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&
 			dev.ClearData();
 		}
 		// Sleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		//std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 }
 
@@ -94,8 +109,8 @@ PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float 
 	samplesToAnalyze{ samplesToAnalyze }, minFrequency{ minFrequency }, maxFrequency{ maxFrequency }, baseNoteFrequency{ baseNoteFrequency },
 	noteFrequencies{ InitializeNoteFrequenciesMap() }, firstHarmonic{ 0.0f }, inaccuracy{ 0.0f }, note{ "A4" }
 {
-	fftResult.resize(samplesToAnalyze / 2ULL + 1ULL);
 	quit.store(false);
+	fftResult.resize(samplesToAnalyze / 2ULL + 1ULL);
 	fftPlan = fftwf_plan_dft_r2c_1d(samplesToAnalyze, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()), FFTW_ESTIMATE);
 }
 
