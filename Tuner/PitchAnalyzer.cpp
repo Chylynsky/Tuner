@@ -31,6 +31,7 @@ void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&
 	{
 		if (dev.RecordedDataSize() >= samplesToAnalyze)
 		{
+			auto lock{ dev.Lock() };
 			fftwf_execute_dft_r2c(fftPlan, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()));
 			GetFirstHarmonic(fftResult.begin(), fftResult.end(), dev.GetSampleRate());
 

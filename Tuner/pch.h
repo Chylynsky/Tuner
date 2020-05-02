@@ -33,6 +33,7 @@
 #include <cmath>
 #include <limits>
 #include <functional>
+#include <mutex>
 #include <atomic>
 #include <map>
 #include "fftw3.h"

@@ -124,9 +124,15 @@ std::vector<AudioInput::sample>::iterator AudioInput::FirstFrameIterator()
 	return audioBlock.begin();
 }
 
+std::lock_guard<std::mutex> AudioInput::Lock()
+{
+	return std::lock_guard<std::mutex>(audioInputMutex);
+}
+
 // Handle QuantumStarted event
 void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 {
+	auto lock = Lock();
 	AudioFrame frame = frameOutputNode.GetFrame();
 	AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 	IMemoryBufferReference reference = buffer.CreateReference();

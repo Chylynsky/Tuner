@@ -15,6 +15,7 @@ class AudioInput
 	winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 	winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 	std::vector<sample> audioBlock;
+	std::mutex audioInputMutex;
 
 	void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 
@@ -37,4 +38,6 @@ public:
 	sample* GetRawData();
 	// Get iterator to the first sample
 	std::vector<sample>::iterator FirstFrameIterator();
+	// Lock resource
+	std::lock_guard<std::mutex> Lock();
 };
