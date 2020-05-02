@@ -31,7 +31,7 @@ namespace winrt::Tuner::implementation
 		reinterpret_cast<MainPage*>(instance)->UpdateTunerScreenAsync(note, inaccuracy, frequency);
 	}
 
-	IAsyncAction MainPage::UpdateTunerScreenAsync(string& note, float inaccuracy, float frequency)
+	IAsyncAction MainPage::UpdateTunerScreenAsync(string& note, float cents, float frequency)
 	{
 		co_await winrt::resume_foreground(Note_TextBlock().Dispatcher());
 
@@ -40,7 +40,7 @@ namespace winrt::Tuner::implementation
 
 		// ... and control its color and circles below, depending on the accuracy of recorded sound
 		// Note acuurate
-		if (abs(inaccuracy) <= 0.03f)
+		if (abs(cents) <= 1.0f)
 		{
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::YellowGreen()));
 
@@ -51,7 +51,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note too low
-		else if (inaccuracy < - 0.03f)
+		else if (cents < -1.0f && cents > -6.0f)
 		{
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
@@ -62,7 +62,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note way too low
-		else if (inaccuracy < - 0.25f)
+		else if (cents <= -6.0f)
 		{
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
@@ -73,7 +73,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note too high
-		else if (inaccuracy > 0.03f)
+		else if (cents > 1.0f && cents < 6.0f)
 		{
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
@@ -84,7 +84,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note way too high
-		else if (inaccuracy > 0.25f)
+		else if (cents >= 6.0f)
 		{
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 

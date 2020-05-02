@@ -13,12 +13,12 @@ void PitchAnalyzer::GetNote(float frequency)
 
 	if (highDiff < lowDiff)
 	{
-		inaccuracy = highDiff;
+		cents = 1200.0f * std::log2((*high).first / frequency);
 		note = (*high).second;
 	}
 	else
 	{
-		inaccuracy = -lowDiff;
+		cents = 1200.0f * std::log2((*low).first / frequency);
 		note = (*low).second;
 	}
 }
@@ -38,7 +38,7 @@ void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&
 			if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency)
 			{
 				GetNote(firstHarmonic);
-				callback(instance, note, inaccuracy, firstHarmonic);
+				callback(instance, note, cents, firstHarmonic);
 			}
 			// Clear the audio input device's buffer and start recording again
 			dev.ClearData();
@@ -108,7 +108,7 @@ void PitchAnalyzer::Run(void* instance, void (*callback)(void*, std::string&, fl
 
 PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float maxFrequency, size_t samplesToAnalyze) :
 	samplesToAnalyze{ samplesToAnalyze }, minFrequency{ minFrequency }, maxFrequency{ maxFrequency }, baseNoteFrequency{ baseNoteFrequency },
-	noteFrequencies{ InitializeNoteFrequenciesMap() }, firstHarmonic{ 0.0f }, inaccuracy{ 0.0f }, note{ "A4" }
+	noteFrequencies{ InitializeNoteFrequenciesMap() }, firstHarmonic{ 0.0f }, cents{ 0.0f }, note{ "A4" }
 {
 	quit.store(false);
 	fftResult.resize(samplesToAnalyze / 2ULL + 1ULL);
