@@ -8,21 +8,14 @@
 class PitchAnalyzer
 {
 	// Number of samples that undergo the analysis
-	static const long samplesToAnalyze;
+	const size_t samplesToAnalyze;
 	// Requested frequency range
-	static const float minFrequency;
-	static const float maxFrequency;
-	// Minimal amplitude to be displayed
-	//static const float minAmplitude;
-	// Full octave
-	//static const std::vector<std::string> octave;
-
-	static const std::map<float, std::string> octave;
-	// Constant needed for note frequencies calculation
-	static const float a;
-	// Base note A4 = 440Hz
-	int A4;
-	
+	const float minFrequency;
+	const float maxFrequency;
+	// Base note A4
+	float baseNoteFrequency;
+	// Map where key: frequency, value: note
+	const std::map<float, std::string> noteFrequencies;
 	// Audio recording device
 	AudioInput dev;
 	// Analysis runs on its own thread
@@ -31,15 +24,13 @@ class PitchAnalyzer
 	std::vector<std::complex<float>> fftResult;
 	// Frequency of the highest amplitude
 	float firstHarmonic;
-	// Maximum amplitude recorded in every measurement
-	float maxAmplitude;
-	// Value between -0.5 and 0.5, 0 means accurate note
+
 	float inaccuracy;
+
 	std::string note;
 	// Required by FFTW
 	fftwf_plan fftPlan;
-	bool quit;
-
+	std::atomic<bool> quit;
 
 	// Analyzes input container of std::complex<T>, being the result of DFT. Returns frequency with the highest amplitude.
 	// Requires iterators and the sampling frequency of the analysed signal.
@@ -59,7 +50,6 @@ class PitchAnalyzer
 		}
 
 		auto maxAmplitudeIndex = std::max_element(amplitudes.begin(), amplitudes.end());
-		maxAmplitude = *maxAmplitudeIndex;
 		firstHarmonic = frequencies[maxAmplitudeIndex - amplitudes.begin()];
 	}
 
@@ -68,9 +58,11 @@ class PitchAnalyzer
 
 	void Analyze(void* instance = nullptr, void (*callback)(void*, std::string&, float, float) = nullptr);
 
+	std::map<float, std::string> InitializeNoteFrequenciesMap();
+
 public:
 
-	PitchAnalyzer();
+	PitchAnalyzer(float A4 = 440.0f, float minFrequency = 15.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 15);
 	~PitchAnalyzer();
 
 	void Run(void* instance = nullptr, void (*callback)(void*, std::string&, float, float) = nullptr);

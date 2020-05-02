@@ -1,66 +1,18 @@
 ﻿#include "pch.h"
 #include "PitchAnalyzer.h"
 
-const long PitchAnalyzer::samplesToAnalyze{ 32768 };
-const float PitchAnalyzer::minFrequency{ 15 };
-const float PitchAnalyzer::maxFrequency{ 8000 };
-//const float PitchAnalyzer::minAmplitude{ 40 };
-const std::vector<std::string> PitchAnalyzer::octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-const float PitchAnalyzer::a{ std::pow(2.0f, 1.0f / 12.0f) };
-
 void PitchAnalyzer::GetNote(float frequency)
 {
-	// Difference in half tones between currently analysed frequency and A4 note
-	float halfTones = std::log10(frequency / A4) / std::log10(a);
-	// Split into integer and floating point parts
-	long integerPart = static_cast<long>(std::round(halfTones));
-	// Save the value
-	inaccuracy = halfTones - integerPart;
-	// Set iterator at the position of A in the octave
-	auto findBaseNote = std::find(octave.begin(), octave.end(), "A");
-
-	// Starting point, A4 note is in fourth octave
-	int currentOctave = 4;
-
-	if (integerPart >= 0)
-	{
-		// Circle around a vector until the valid note is found
-		while (integerPart > 0)
-		{
-			integerPart--;
-			findBaseNote++;
-			if (findBaseNote == octave.end())
-			{
-				// Go one octave up
-				currentOctave++;
-				findBaseNote = octave.begin();
-			}
-		}
-	}
-	else
-	{
-		// Circle around a vector until the valid note is found
-		while (integerPart != 0)
-		{
-			if (findBaseNote == octave.begin())
-			{
-				// Go one octave down
-				currentOctave--;
-				findBaseNote = octave.end();
-			}
-
-			integerPart++;
-			findBaseNote--;
-		}
-	}
-	note = *findBaseNote + std::to_string(currentOctave);
+	auto high = noteFrequencies.lower_bound(frequency);
+	auto low = std::prev(high);
+	return;
 }
 
 void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&, float, float))
 {
 	dev.Initialize();
 
-	while (!quit)
+	while (!quit.load())
 	{
 		if (dev.RecordedDataSize() >= samplesToAnalyze)
 		{
@@ -80,22 +32,77 @@ void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&
 	}
 }
 
+std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap()
+{
+	// Constant needed for note frequencies calculation
+	const float a{ std::pow(2.0f, 1.0f / 12.0f) };
+	const std::vector<std::string> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+	const auto baseNoteIter{ std::next(octave.begin(), 9) };
+
+	auto octaveIter{ baseNoteIter };
+	float currentFrequency{ baseNoteFrequency };
+	int currentOctave{ 4 };
+	int halfSteps{ 0 };
+	std::map<float, std::string> result;
+
+	// Fill a map for notes below and equal AA
+	while (currentFrequency >= minFrequency)
+	{
+		currentFrequency = baseNoteFrequency * std::pow(a, halfSteps);
+		result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
+		halfSteps--;
+
+		if (octaveIter == octave.begin())
+		{
+			octaveIter = octave.end();
+			currentOctave--;
+		}
+
+		octaveIter--;
+	}
+
+	// Set iterator to one half-step above A4
+	octaveIter = baseNoteIter + 1;
+	halfSteps = 1;
+	currentOctave = 4;
+
+	// Fill a map for notes below and equal AA
+	while (currentFrequency <= maxFrequency)
+	{
+		if (octaveIter == octave.end())
+		{
+			octaveIter = octave.begin();
+			currentOctave++;
+		}
+
+		currentFrequency = baseNoteFrequency * std::pow(a, halfSteps);
+		result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
+		halfSteps++;
+		octaveIter++;
+	}
+
+	return result;
+}
+
 // Sound analysis is performed on its own thread
 void PitchAnalyzer::Run(void* instance, void (*callback)(void*, std::string&, float, float))
 {
 	analysis = std::thread(&PitchAnalyzer::Analyze, this, instance, callback);
 }
 
-PitchAnalyzer::PitchAnalyzer() : A4{ 440 }, firstHarmonic { 0.0f }, maxAmplitude{ 0.0f }, inaccuracy{ 0.0f },
-fftResult{ std::vector<std::complex<float>>(samplesToAnalyze / 2 + 1) }, note{ "X" }, quit{ false }
+PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float maxFrequency, size_t samplesToAnalyze) :
+	samplesToAnalyze{ samplesToAnalyze }, minFrequency{ minFrequency }, maxFrequency{ maxFrequency }, baseNoteFrequency{ baseNoteFrequency },
+	noteFrequencies{ InitializeNoteFrequenciesMap() }, firstHarmonic{ 0.0f }, inaccuracy{ 0.0f }, note{ "A4" }
 {
+	fftResult.resize(samplesToAnalyze / 2ULL + 1ULL);
+	quit.store(false);
 	fftPlan = fftwf_plan_dft_r2c_1d(samplesToAnalyze, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()), FFTW_ESTIMATE);
 }
 
 PitchAnalyzer::~PitchAnalyzer()
 {
-	if (!quit)
-		quit = true;
+	if (!quit.load())
+		quit.store(true);
 
 	// Wait for the thread to finish
 	if (analysis.joinable())
