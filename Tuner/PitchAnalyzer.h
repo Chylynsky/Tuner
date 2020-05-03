@@ -34,8 +34,8 @@ class PitchAnalyzer
 
 	// Analyzes input container of std::complex<T>, being the result of FFT. Returns frequency with the highest amplitude.
 	// Requires iterators and the sampling frequency of the analysed signal.
-	template<typename iterator>
-	void GetFirstHarmonic(iterator first, iterator last, unsigned int sampling_freq)
+	template<typename iter>
+	void GetFirstHarmonic(iter first, iter last, unsigned int sampling_freq)
 	{
 		static const int N = static_cast<int>(last - first);
 		static std::vector<float> frequencies(N);
@@ -56,7 +56,7 @@ class PitchAnalyzer
 	// Get std::string with a name of the note, based on the given frequency
 	void GetNote(float frequency);
 
-	void Analyze(void* instance = nullptr, void (*callback)(void*, std::string&, float, float) = nullptr);
+	void Analyze(std::function<void(const std::string&, float, float)> callback);
 
 	std::map<float, std::string> InitializeNoteFrequenciesMap();
 
@@ -65,5 +65,5 @@ public:
 	PitchAnalyzer(float A4 = 440.0f, float minFrequency = 20.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 17);
 	~PitchAnalyzer();
 
-	void Run(void* instance = nullptr, void (*callback)(void*, std::string&, float, float) = nullptr);
+	void Run(std::function<void(const std::string&, float, float)> callback);
 };

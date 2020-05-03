@@ -15,6 +15,7 @@ using namespace winrt::Windows::Media::MediaProperties;
 IAsyncAction AudioInput::Initialize()
 {
 	audioSettings = AudioGraphSettings(Render::AudioRenderCategory::Media);
+
 	// Start async operation that creates new audio graph
 	CreateAudioGraphResult graphCreation{ co_await AudioGraph::CreateAsync(audioSettings) };
 
@@ -82,7 +83,7 @@ std::vector<AudioInput::sample>::iterator AudioInput::FirstFrameIterator()
 	return audioBlock.begin();
 }
 
-std::lock_guard<std::mutex> AudioInput::Lock()
+std::lock_guard<std::mutex> AudioInput::LockAudioInputDevice()
 {
 	return std::lock_guard<std::mutex>(audioInputMutex);
 }
@@ -90,7 +91,7 @@ std::lock_guard<std::mutex> AudioInput::Lock()
 // Handle QuantumStarted event
 void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 {
-	auto lock = Lock();
+	auto lock = LockAudioInputDevice();
 	AudioFrame frame = frameOutputNode.GetFrame();
 	AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 	IMemoryBufferReference reference = buffer.CreateReference();

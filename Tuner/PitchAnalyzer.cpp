@@ -23,7 +23,7 @@ void PitchAnalyzer::GetNote(float frequency)
 	}
 }
 
-void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&, float, float))
+void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback)
 {
 	dev.Initialize();
 
@@ -31,20 +31,20 @@ void PitchAnalyzer::Analyze(void* instance, void (*callback)(void*, std::string&
 	{
 		if (dev.RecordedDataSize() >= samplesToAnalyze)
 		{
-			auto lock{ dev.Lock() };
+			auto lock{ dev.LockAudioInputDevice() };
 			fftwf_execute_dft_r2c(fftPlan, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()));
 			GetFirstHarmonic(fftResult.begin(), fftResult.end(), dev.GetSampleRate());
 
 			if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency)
 			{
 				GetNote(firstHarmonic);
-				callback(instance, note, cents, firstHarmonic);
+				callback(note, cents, firstHarmonic);
 			}
 			// Clear the audio input device's buffer and start recording again
 			dev.ClearData();
 		}
 		// Sleep
-		//std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		std::this_thread::sleep_for(std::chrono::milliseconds(750));
 	}
 }
 
@@ -101,9 +101,9 @@ std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap()
 }
 
 // Sound analysis is performed on its own thread
-void PitchAnalyzer::Run(void* instance, void (*callback)(void*, std::string&, float, float))
+void PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback)
 {
-	analysis = std::thread(&PitchAnalyzer::Analyze, this, instance, callback);
+	analysis = std::thread(&PitchAnalyzer::Analyze, this, callback);
 }
 
 PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float maxFrequency, size_t samplesToAnalyze) :

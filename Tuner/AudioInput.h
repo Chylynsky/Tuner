@@ -39,5 +39,5 @@ public:
 	// Get iterator to the first sample
 	std::vector<sample>::iterator FirstFrameIterator();
 	// Lock resource
-	std::lock_guard<std::mutex> Lock();
+	std::lock_guard<std::mutex> LockAudioInputDevice();
 };
