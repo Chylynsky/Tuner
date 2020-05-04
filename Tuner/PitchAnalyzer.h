@@ -1,5 +1,6 @@
 #pragma once
 #include "AudioInput.h"
+#include "WindowGenerator.h"
 
 // Avoid name collisions
 #undef max
@@ -7,6 +8,12 @@
 
 class PitchAnalyzer
 {
+	struct PitchAnalysisResult
+	{
+		const std::string& note;
+		float cents;
+	};
+
 	// Number of samples that undergo the analysis
 	const size_t samplesToAnalyze;
 	// Requested frequency range
@@ -22,48 +29,82 @@ class PitchAnalyzer
 	std::thread analysis;
 	// Result of Fast Fourier Transform
 	std::vector<std::complex<float>> fftResult;
-	// Frequency of the highest amplitude
-	float firstHarmonic;
-	// Difference (in cents) between frequencies of the input signal and the nearest note
-	float cents;
-
-	std::string note;
 	// Required by FFTW
 	fftwf_plan fftPlan;
+	// Analysis thread control
 	std::atomic<bool> quit;
+	// Gaussian window coefficients
+	std::array<float, 1 << 14> gaussianWindow;
 
-	// Analyzes input container of std::complex<T>, being the result of FFT. Returns frequency with the highest amplitude.
-	// Requires iterators and the sampling frequency of the analysed signal.
+	//	Template function that takes an input container of std::complex<T>, being the result of FFT and 
+	// returns the frequency of the first harmonic.
 	template<typename iter>
-	void GetFirstHarmonic(iter first, iter last, unsigned int sampling_freq)
-	{
-		static const int N = static_cast<int>(last - first);
-		static std::vector<float> frequencies(N);
-		static std::vector<float> amplitudes(N);
-		
-		for (int i = 0; i < N; i++)
-		{
-			// Get frequencies
-			frequencies[i] = i * sampling_freq / N;
-			// Get amplitude
-			amplitudes[i] = std::abs(*(first + i));
-		}
+	float GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept;
 
-		auto maxAmplitudeIndex = std::max_element(amplitudes.begin(), amplitudes.end());
-		firstHarmonic = frequencies[maxAmplitudeIndex - amplitudes.begin()];
-	}
+	// Apply window to a given signal
+	template<typename iter1, typename iter2>
+	void ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst) noexcept;
 
-	// Get std::string with a name of the note, based on the given frequency
-	void GetNote(float frequency);
+	// Function that takes an input container of std::complex<T>, being the result of FFTand returns
+	// a filled PitchAnalysisResult struct.
+	PitchAnalysisResult GetNote(float frequency) const noexcept;
 
-	void Analyze(std::function<void(const std::string&, float, float)> callback);
+	// Function performs harmonic analysis on input signal and calls the callback function for each 
+	// analysis performed.
+	// - std::function<void(const std::string&, float, float)> callback - callback function object, where
+	//	- const std::string& - reference to the nearest note
+	//	- float - difference in cents between the frequencies of the nearest note and current signal
+	//	- float - frequency of the signal
+	void Analyze(std::function<void(const std::string&, float, float)> callback) noexcept;
 
-	std::map<float, std::string> InitializeNoteFrequenciesMap();
+	// Function used for filling the noteFrequencies std::map.
+	std::map<float, std::string> InitializeNoteFrequenciesMap() noexcept;
 
 public:
 
-	PitchAnalyzer(float A4 = 440.0f, float minFrequency = 20.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 17);
+	explicit PitchAnalyzer(float A4 = 440.0f, float minFrequency = 20.0f, float maxFrequency = 8000.0f, size_t samplesToAnalyze = 1 << 14);
 	~PitchAnalyzer();
 
-	void Run(std::function<void(const std::string&, float, float)> callback);
+	// Function starts an analysis in seperate thread.
+	// - std::function<void(const std::string&, float, float)> callback - callback function object, where
+	//	- const std::string& - reference to the nearest note
+	//	- float - difference in cents between the frequencies of the nearest note and current signal
+	//	- float - frequency of the signal
+	void Run(std::function<void(const std::string&, float, float)> callback) noexcept;
 };
+
+template<typename iter>
+float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, unsigned int sampling_freq) const noexcept
+{
+	static const int N = static_cast<int>(last - first);
+	static std::vector<float> frequencies(N);
+	static std::vector<float> amplitudes(N);
+
+	for (int i = 0; i < N; i++)
+	{
+		// Get frequencies
+		frequencies[i] = i * sampling_freq / N;
+		// Get amplitude
+		amplitudes[i] = std::abs(*(first + i));
+	}
+
+	auto maxAmplitudeIndex = std::max_element(amplitudes.begin(), amplitudes.end());
+	return frequencies[maxAmplitudeIndex - amplitudes.begin()];
+}
+
+// Sound analysis is performed on its own thread
+inline void PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback) noexcept
+{
+	analysis = std::thread(&PitchAnalyzer::Analyze, this, callback);
+}
+
+template<typename iter1, typename iter2>
+inline void PitchAnalyzer::ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst) noexcept
+{
+	while (samplesFirst != samplesLast)
+	{
+		*samplesFirst *= *windowFirst;
+		samplesFirst++;
+		windowFirst++;
+	}
+}

@@ -47,51 +47,10 @@ IAsyncAction AudioInput::Initialize()
 	}
 }
 
-// Get the number of recorded samples
-size_t AudioInput::RecordedDataSize()
-{
-	return audioBlock.size();
-}
-
-// Get current sample rate
-unsigned int AudioInput::GetSampleRate()
-{
-	return inputDevice.EncodingProperties().SampleRate();
-}
-
-// Get current bit depth
-unsigned int AudioInput::GetBitDepth()
-{
-	return inputDevice.EncodingProperties().BitsPerSample();
-}
-
-// Clear the buffer containing recorded samples
-void AudioInput::ClearData()
-{
-	audioBlock.clear();
-}
-
-// Get raw pointer to recorded data
-AudioInput::sample* AudioInput::GetRawData()
-{
-	return audioBlock.data();
-}
-
-// Get iterator to the first sample
-std::vector<AudioInput::sample>::iterator AudioInput::FirstFrameIterator()
-{
-	return audioBlock.begin();
-}
-
-std::lock_guard<std::mutex> AudioInput::LockAudioInputDevice()
-{
-	return std::lock_guard<std::mutex>(audioInputMutex);
-}
-
 // Handle QuantumStarted event
 void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 {
-	auto lock = LockAudioInputDevice();
+	auto lock{ LockAudioInputDevice() };
 	AudioFrame frame = frameOutputNode.GetFrame();
 	AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 	IMemoryBufferReference reference = buffer.CreateReference();
@@ -102,6 +61,8 @@ void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectabl
 	// Get the pointer to recorded data
 	com_ptr<IMemoryBufferByteAccess> byteAccess = reference.as<IMemoryBufferByteAccess>();
 	byteAccess->GetBuffer(&byte, &capacity);
+
+	WINRT_ASSERT(byte);
 
 	// Fill the audioBlock with recorded audio data
 	audioBlock.insert(audioBlock.end(), reinterpret_cast<sample*>(byte), reinterpret_cast<sample*>(byte + buffer.Length()));

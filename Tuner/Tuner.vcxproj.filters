@@ -17,11 +17,13 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="AudioInput.cpp" />
     <ClCompile Include="PitchAnalyzer.cpp" />
+    <ClCompile Include="WindowGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="AudioInput.h" />
     <ClInclude Include="PitchAnalyzer.h" />
+    <ClInclude Include="WindowGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
@@ -56,8 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="PropertySheet.props" />
-    <None Include="packages.config" />
     <None Include="libfftw3f-3.dll" />
+    <None Include="Tuner_TemporaryKey.pfx" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />

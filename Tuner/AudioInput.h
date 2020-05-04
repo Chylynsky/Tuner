@@ -27,17 +27,58 @@ public:
 	// Get an instance of AudioInput class
 	winrt::Windows::Foundation::IAsyncAction Initialize();
 	// Get the number of recorded samples
-	size_t RecordedDataSize();
+	size_t RecordedDataSize() const noexcept;
 	// Get current sample rate
-	unsigned int GetSampleRate();
+	uint32_t GetSampleRate() const;
 	// Get current bit depth
-	unsigned int GetBitDepth();
+	uint32_t GetBitDepth() const;
 	// Clear the buffer containing recorded samples
-	void ClearData();
+	void ClearData() noexcept;
 	// Get raw pointer to recorded data
-	sample* GetRawData();
+	sample* GetRawData() noexcept;
 	// Get iterator to the first sample
-	std::vector<sample>::iterator FirstFrameIterator();
+	std::vector<sample>::iterator FirstFrameIterator() noexcept;
 	// Lock resource
-	std::lock_guard<std::mutex> LockAudioInputDevice();
+	std::lock_guard<std::mutex> LockAudioInputDevice() noexcept;
 };
+
+// Get the number of recorded samples
+inline size_t AudioInput::RecordedDataSize() const noexcept
+{
+	return audioBlock.size();
+}
+
+// Get current sample rate
+inline uint32_t AudioInput::GetSampleRate() const
+{
+	return inputDevice.EncodingProperties().SampleRate();
+}
+
+// Get current bit depth
+inline uint32_t AudioInput::GetBitDepth() const
+{
+	return inputDevice.EncodingProperties().BitsPerSample();
+}
+
+// Clear the buffer containing recorded samples
+inline void AudioInput::ClearData() noexcept
+{
+	audioBlock.clear();
+}
+
+// Get raw pointer to recorded data
+inline AudioInput::sample* AudioInput::GetRawData() noexcept
+{
+	return audioBlock.data();
+}
+
+// Get iterator to the first sample
+inline std::vector<AudioInput::sample>::iterator AudioInput::FirstFrameIterator() noexcept
+{
+	return audioBlock.begin();
+}
+
+inline std::lock_guard<std::mutex> AudioInput::LockAudioInputDevice() noexcept
+{
+	return std::lock_guard<std::mutex>(audioInputMutex);
+}

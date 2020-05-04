@@ -1,29 +1,29 @@
 ﻿#include "pch.h"
 #include "PitchAnalyzer.h"
 
-void PitchAnalyzer::GetNote(float frequency)
+PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
 {
 	// Get the nearest note above or equal
 	auto high = noteFrequencies.lower_bound(frequency);
 	// Get the nearest note below
 	auto low = std::prev(high);
 
+	WINRT_ASSERT(*high <= *(std::prev(noteFrequencies.end())) && *high > *(noteFrequencies.begin()));
+
 	float highDiff = (*high).first - frequency;
 	float lowDiff = frequency - (*low).first;
 
 	if (highDiff < lowDiff)
 	{
-		cents = 1200.0f * std::log2((*high).first / frequency);
-		note = (*high).second;
+		return { (*high).second, 1200.0f * std::log2((*high).first / frequency) };
 	}
 	else
 	{
-		cents = 1200.0f * std::log2((*low).first / frequency);
-		note = (*low).second;
+		return { (*low).second, 1200.0f * std::log2((*low).first / frequency) };
 	}
 }
 
-void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback)
+void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback) noexcept
 {
 	dev.Initialize();
 
@@ -32,23 +32,24 @@ void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)
 		if (dev.RecordedDataSize() >= samplesToAnalyze)
 		{
 			auto lock{ dev.LockAudioInputDevice() };
+			ApplyWindow(dev.FirstFrameIterator(), dev.FirstFrameIterator() + samplesToAnalyze, gaussianWindow.begin());
 			fftwf_execute_dft_r2c(fftPlan, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()));
-			GetFirstHarmonic(fftResult.begin(), fftResult.end(), dev.GetSampleRate());
+			float firstHarmonic = GetFirstHarmonic(fftResult.begin(), fftResult.end(), dev.GetSampleRate());
 
 			if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency)
 			{
-				GetNote(firstHarmonic);
-				callback(note, cents, firstHarmonic);
+				PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
+				callback(measurement.note, measurement.cents, firstHarmonic);
 			}
 			// Clear the audio input device's buffer and start recording again
 			dev.ClearData();
 		}
-		// Sleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(750));
+		// Sleep for the time needed to fill the buffer
+		std::this_thread::sleep_for(std::chrono::milliseconds(600));
 	}
 }
 
-std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap()
+std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
 {
 	// Constant needed for note frequencies calculation
 	const float a{ std::pow(2.0f, 1.0f / 12.0f) };
@@ -100,19 +101,15 @@ std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap()
 	return result;
 }
 
-// Sound analysis is performed on its own thread
-void PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback)
-{
-	analysis = std::thread(&PitchAnalyzer::Analyze, this, callback);
-}
-
 PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float maxFrequency, size_t samplesToAnalyze) :
 	samplesToAnalyze{ samplesToAnalyze }, minFrequency{ minFrequency }, maxFrequency{ maxFrequency }, baseNoteFrequency{ baseNoteFrequency },
-	noteFrequencies{ InitializeNoteFrequenciesMap() }, firstHarmonic{ 0.0f }, cents{ 0.0f }, note{ "A4" }
+	noteFrequencies{ InitializeNoteFrequenciesMap() }
 {
 	quit.store(false);
 	fftResult.resize(samplesToAnalyze / 2ULL + 1ULL);
 	fftPlan = fftwf_plan_dft_r2c_1d(samplesToAnalyze, dev.GetRawData(), reinterpret_cast<fftwf_complex*>(fftResult.data()), FFTW_ESTIMATE);
+
+	WindowGenerator::Generate(gaussianWindow.begin(), gaussianWindow.end(), WindowGenerator::WindowType::Gauss);
 }
 
 PitchAnalyzer::~PitchAnalyzer()
