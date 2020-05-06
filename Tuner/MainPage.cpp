@@ -34,8 +34,7 @@ namespace winrt::Tuner::implementation
 
 		// ... and control its color and circles below, depending on the accuracy of recorded sound
 		// Note acuurate
-		if (abs(cents) <= 1.0f)
-		{
+		if (abs(cents) <= 1.0f) {
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::YellowGreen()));
 
 			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
@@ -45,8 +44,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note too low
-		else if (cents < -1.0f && cents > -6.0f)
-		{
+		else if (cents < -1.0f && cents > -6.0f) {
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
 			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
@@ -56,8 +54,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note way too low
-		else if (cents <= -6.0f)
-		{
+		else if (cents <= -6.0f) {
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
 			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
@@ -67,8 +64,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note too high
-		else if (cents > 1.0f && cents < 6.0f)
-		{
+		else if (cents > 1.0f && cents < 6.0f) {
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
 			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
@@ -78,8 +74,7 @@ namespace winrt::Tuner::implementation
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
 		}
 		// Note way too high
-		else if (cents >= 6.0f)
-		{
+		else if (cents >= 6.0f) {
 			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 
 			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
