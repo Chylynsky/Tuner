@@ -25,25 +25,26 @@ namespace winrt::Tuner::implementation
 
 	void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback) noexcept
 	{
-		while (!quit.load()) {
-			if (dev.RecordedDataSize() >= SAMPLES_TO_ANALYZE) {
-				dev.Stop();
-				auto lock = dev.LockAudioInputDevice();
-				auto* sample = dev.GetRawData();
+		while (!quitAnalysis.load()) {
+			if (audioInput.RecordedDataSize() >= SAMPLES_TO_ANALYZE) {
+				audioInput.Stop();
+				auto lock = audioInput.LockAudioInputDevice();
+				auto* sample = audioInput.GetRawPtr();
+
 				// Apply window function in 4 threads
 				DSP::WindowGenerator::ApplyWindow(sample, sample + SAMPLES_TO_ANALYZE, windowCoefficients.begin(), 4);
 				fftwf_execute_dft_r2c(fftPlan, sample, reinterpret_cast<fftwf_complex*>(fftResult.data()));
-				float firstHarmonic = GetFirstHarmonic(fftResult.begin(), fftResult.end(), dev.GetSampleRate());
+				float firstHarmonic{ GetFirstHarmonic(fftResult.begin(), fftResult.end(), audioInput.GetSampleRate()) };
 
 				if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
 					PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
 					callback(measurement.note, measurement.cents, firstHarmonic);
 				}
-				dev.ClearData();
+				audioInput.ClearData();
 			}
 			// Sleep for the time needed to fill the buffer
-			dev.Start();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000 * SAMPLES_TO_ANALYZE / dev.GetSampleRate()));
+			audioInput.Start();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000 * SAMPLES_TO_ANALYZE / audioInput.GetSampleRate()));
 		}
 	}
 
@@ -100,23 +101,22 @@ namespace winrt::Tuner::implementation
 		minFrequency{ minFrequency },
 		maxFrequency{ maxFrequency },
 		baseNoteFrequency{ A4 },
-		noteFrequencies{ InitializeNoteFrequenciesMap() }
+		noteFrequencies{ InitializeNoteFrequenciesMap() },
+		quitAnalysis{ false }
 	{
-		quit.store(false);
-		//fftResult.resize(SAMPLES_TO_ANALYZE / 2ULL + 1ULL);
-		//dev.SetAudioBufferSize(SAMPLES_TO_ANALYZE);
+
 	}
 
 	PitchAnalyzer::~PitchAnalyzer()
 	{
 		// Terminate the infinite loop
-		if (!quit.load()) {
-			quit.store(true);
+		if (!quitAnalysis.load()) {
+			quitAnalysis.store(true);
 		}
 
 		// Join the thread
-		if (analysis.joinable()) {
-			analysis.join();
+		if (pitchAnalysisThread.joinable()) {
+			pitchAnalysisThread.join();
 		}
 
 		fftwf_destroy_plan(fftPlan);

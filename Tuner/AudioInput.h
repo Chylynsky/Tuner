@@ -43,7 +43,7 @@ namespace winrt::Tuner::implementation
 		// Clear the buffer containing recorded samples
 		void ClearData() noexcept;
 		// Get raw pointer to recorded data
-		sample_t* GetRawData() noexcept;
+		sample_t* GetRawPtr() noexcept;
 		// Get iterator to the first sample
 		std::vector<sample_t>::iterator FirstFrameIterator() noexcept;
 		// Lock resource
@@ -90,11 +90,11 @@ namespace winrt::Tuner::implementation
 	}
 
 	// Get raw pointer to recorded data
-	inline AudioInput::sample_t* AudioInput::GetRawData() noexcept
+	inline AudioInput::sample_t* AudioInput::GetRawPtr() noexcept
 	{
 		return audioBuffer.data();
 	}
-
+	
 	// Get iterator to the first sample
 	inline std::vector<AudioInput::sample_t>::iterator AudioInput::FirstFrameIterator() noexcept
 	{

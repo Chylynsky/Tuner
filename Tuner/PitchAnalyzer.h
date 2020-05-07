@@ -10,7 +10,7 @@ namespace winrt::Tuner::implementation
 {
 	class PitchAnalyzer
 	{
-		static constexpr size_t SAMPLES_TO_ANALYZE{ 1 << 14 };
+		static constexpr size_t SAMPLES_TO_ANALYZE{ 1 << 15 };
 
 		struct PitchAnalysisResult
 		{
@@ -23,20 +23,23 @@ namespace winrt::Tuner::implementation
 		const float maxFrequency;
 		// Base note A4
 		float baseNoteFrequency;
+
 		// Map where key: frequency, value: note
 		const std::map<float, std::string> noteFrequencies;
-		// Audio recording device
-		AudioInput dev;
-		// Analysis runs on its own thread
-		std::thread analysis;
 		// Result of Fast Fourier Transform
-		std::vector<std::complex<float>> fftResult;
-		// Required by FFTW
-		fftwf_plan fftPlan;
-		// Analysis thread control
-		std::atomic<bool> quit;
+		std::array<std::complex<float>, SAMPLES_TO_ANALYZE / 2ULL + 1ULL> fftResult;
 		// Gaussian window coefficients
 		std::array<float, SAMPLES_TO_ANALYZE> windowCoefficients;
+
+		// Analysis thread control
+		std::atomic<bool> quitAnalysis;
+		// Analysis runs on its own thread
+		std::thread pitchAnalysisThread;
+
+		// Audio recording device
+		AudioInput audioInput;
+		// Required by FFTW
+		fftwf_plan fftPlan;
 
 		//	Template function that takes an input container of std::complex<T>, being the result of FFT and 
 		// returns the frequency of the first harmonic.
@@ -64,7 +67,7 @@ namespace winrt::Tuner::implementation
 		~PitchAnalyzer();
 
 		// Function starts an analysis in seperate thread.
-		// - std::function<void(const std::string&, float, float)> callback - callback function object, where
+		//  - std::function<void(const std::string&, float, float)> callback - callback function object, where
 		//	- const std::string& - reference to the nearest note
 		//	- float - difference in cents between the frequencies of the nearest note and current signal
 		//	- float - frequency of the signal
@@ -74,39 +77,39 @@ namespace winrt::Tuner::implementation
 	template<typename iter>
 	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, unsigned int sampling_freq) const noexcept
 	{
-		static const int N = static_cast<int>(last - first);
-		static std::vector<float> frequencies(N);
-		static std::vector<float> amplitudes(N);
+		std::multimap<float, float> LUT;
+		size_t n = minFrequency * SAMPLES_TO_ANALYZE / sampling_freq;
 
-		for (int i = 0; i < N; i++) {
-			// Get frequencies
-			frequencies[i] = i * sampling_freq / N;
-			// Get amplitude
-			amplitudes[i] = std::abs(*(first + i));
+		// Check only frequencies in specified range
+		first += n;
+		const auto maxFreqIter = first + 1 + maxFrequency * SAMPLES_TO_ANALYZE / sampling_freq;
+
+		while (first != maxFreqIter) {
+			LUT.insert(std::make_pair(std::abs(*first), n * sampling_freq / SAMPLES_TO_ANALYZE));
+			first++;
+			n++;
 		}
 
-		auto maxAmplitudeIndex = std::max_element(amplitudes.begin(), amplitudes.end());
-		return frequencies[maxAmplitudeIndex - amplitudes.begin()];
+		return LUT.rbegin()->second;
 	}
 
 	// Sound analysis is performed on its own thread
 	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback) noexcept
 	{
-		co_await dev.Initialize();
+		co_await audioInput.Initialize();
 
-		dev.SetAudioBufferSize(SAMPLES_TO_ANALYZE);
-		fftResult.resize(SAMPLES_TO_ANALYZE / 2ULL + 1ULL);
+		audioInput.SetAudioBufferSize(SAMPLES_TO_ANALYZE);
 
 		fftPlan = fftwf_plan_dft_r2c_1d(
 			static_cast<int>(SAMPLES_TO_ANALYZE),
-			dev.GetRawData(),
+			audioInput.GetRawPtr(),
 			reinterpret_cast<fftwf_complex*>(fftResult.data()),
 			FFTW_MEASURE);
 
 		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::Blackman, windowCoefficients.begin(), windowCoefficients.end());
-		analysis = std::thread(&PitchAnalyzer::Analyze, this, callback);
+		pitchAnalysisThread = std::thread(&PitchAnalyzer::Analyze, this, callback);
 
 		// Start recording input
-		dev.Start();
+		audioInput.Start();
 	}
 }

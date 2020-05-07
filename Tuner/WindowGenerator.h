@@ -5,7 +5,7 @@ namespace DSP
 	class WindowGenerator
 	{
 		template<typename T>
-		inline static constexpr T pi{ static_cast<T>(3.141592653589793) };
+		static constexpr T pi{ static_cast<T>(3.141592653589793) };
 
 		// Generate Gaussian window coefficients
 		template<typename iter, typename T = float>

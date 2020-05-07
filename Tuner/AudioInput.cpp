@@ -44,7 +44,6 @@ namespace winrt::Tuner::implementation
 				inputDevice = nodeCreation.DeviceInputNode();
 				// Input from the recording device is routed to frameOutputNode
 				inputDevice.AddOutgoingConnection(frameOutputNode);
-				//audioGraph.Start();
 			}
 		}
 	}

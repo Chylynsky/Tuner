@@ -27,6 +27,7 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <list>
 #include <complex>
 #include <iterator>
 #include <string>
