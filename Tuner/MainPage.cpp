@@ -3,16 +3,16 @@
 #include "MainPage.g.cpp"
 
 using namespace std;
+using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
 
 namespace winrt::Tuner::implementation
 {
-    MainPage::MainPage()
+	MainPage::MainPage() : pitchAnalyzer{ 440.0f, 20.0f, 8000.0f }
     {
         InitializeComponent();
-		pitchAnalyzer.Run(std::bind(&MainPage::SoundAnalyzed_Callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     }
 
     int32_t MainPage::MyProperty()
@@ -83,5 +83,10 @@ namespace winrt::Tuner::implementation
 			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 		}
+	}
+
+	IAsyncAction MainPage::Page_Loaded(IInspectable const& sender, RoutedEventArgs const& e)
+	{
+		co_await pitchAnalyzer.Run(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
 	}
 }

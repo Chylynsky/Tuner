@@ -44,7 +44,7 @@ namespace winrt::Tuner::implementation
 				inputDevice = nodeCreation.DeviceInputNode();
 				// Input from the recording device is routed to frameOutputNode
 				inputDevice.AddOutgoingConnection(frameOutputNode);
-				audioGraph.Start();
+				//audioGraph.Start();
 			}
 		}
 	}
@@ -52,7 +52,6 @@ namespace winrt::Tuner::implementation
 	// Handle QuantumStarted event
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
-		auto lock{ std::lock_guard<std::mutex>(audioInputMutex) };
 		AudioFrame frame = frameOutputNode.GetFrame();
 		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
@@ -67,7 +66,8 @@ namespace winrt::Tuner::implementation
 		WINRT_ASSERT(byte);
 
 		// Fill the audioBlock with recorded audio data
-		audioBlock.insert(audioBlock.end(), reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()));
+		auto lock{ LockAudioInputDevice() };
+		audioBuffer.insert(audioBuffer.end(), reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()));
 	}
 
 	AudioInput::AudioInput() : audioGraph{ nullptr }, audioSettings{ nullptr }, inputDevice{ nullptr }, frameOutputNode{ nullptr }
@@ -78,6 +78,6 @@ namespace winrt::Tuner::implementation
 	AudioInput::~AudioInput()
 	{
 		audioGraph.Close();
-		audioBlock.clear();
+		audioBuffer.clear();
 	}
 }

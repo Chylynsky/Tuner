@@ -23,8 +23,6 @@ namespace winrt::Tuner::implementation
 		const float maxFrequency;
 		// Base note A4
 		float baseNoteFrequency;
-		// Sample rate
-		size_t sampleRate;
 		// Map where key: frequency, value: note
 		const std::map<float, std::string> noteFrequencies;
 		// Audio recording device
@@ -70,7 +68,7 @@ namespace winrt::Tuner::implementation
 		//	- const std::string& - reference to the nearest note
 		//	- float - difference in cents between the frequencies of the nearest note and current signal
 		//	- float - frequency of the signal
-		void Run(std::function<void(const std::string&, float, float)> callback) noexcept;
+		winrt::Windows::Foundation::IAsyncAction Run(std::function<void(const std::string&, float, float)> callback) noexcept;
 	};
 
 	template<typename iter>
@@ -92,8 +90,23 @@ namespace winrt::Tuner::implementation
 	}
 
 	// Sound analysis is performed on its own thread
-	inline void PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback) noexcept
+	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run(std::function<void(const std::string&, float, float)> callback) noexcept
 	{
+		co_await dev.Initialize();
+
+		dev.SetAudioBufferSize(SAMPLES_TO_ANALYZE);
+		fftResult.resize(SAMPLES_TO_ANALYZE / 2ULL + 1ULL);
+
+		fftPlan = fftwf_plan_dft_r2c_1d(
+			static_cast<int>(SAMPLES_TO_ANALYZE),
+			dev.GetRawData(),
+			reinterpret_cast<fftwf_complex*>(fftResult.data()),
+			FFTW_MEASURE);
+
+		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::Blackman, windowCoefficients.begin(), windowCoefficients.end());
 		analysis = std::thread(&PitchAnalyzer::Analyze, this, callback);
+
+		// Start recording input
+		dev.Start();
 	}
 }

@@ -16,23 +16,28 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioGraphSettings audioSettings;
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
-		std::vector<sample_t> audioBlock;
+		std::vector<sample_t> audioBuffer;
+		std::mutex audioInputMutex;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 
 	public:
-
-		std::mutex audioInputMutex;
 
 		AudioInput();
 		~AudioInput();
 
 		// Get an instance of AudioInput class
 		winrt::Windows::Foundation::IAsyncAction Initialize();
+		// Start recording audio data
+		void Start() const noexcept;
+		// Stop recording audio data
+		void Stop() const noexcept;
+		// Set the size of audio buffer
+		void SetAudioBufferSize(size_t newSize);
 		// Get the number of recorded samples
 		size_t RecordedDataSize() const noexcept;
 		// Get current sample rate
-		uint32_t GetSampleRate() const;
+		uint32_t GetSampleRate() const noexcept;
 		// Get current bit depth
 		uint32_t GetBitDepth() const;
 		// Clear the buffer containing recorded samples
@@ -45,14 +50,29 @@ namespace winrt::Tuner::implementation
 		std::lock_guard<std::mutex> LockAudioInputDevice() noexcept;
 	};
 
+	inline void AudioInput::Start() const noexcept
+	{
+		audioGraph.Start();
+	}
+
+	inline void AudioInput::Stop() const noexcept
+	{
+		audioGraph.Stop();
+	}
+
+	inline void AudioInput::SetAudioBufferSize(size_t newSize)
+	{
+		audioBuffer.resize(newSize);
+	}
+
 	// Get the number of recorded samples
 	inline size_t AudioInput::RecordedDataSize() const noexcept
 	{
-		return audioBlock.size();
+		return audioBuffer.size();
 	}
 
 	// Get current sample rate
-	inline uint32_t AudioInput::GetSampleRate() const
+	inline uint32_t AudioInput::GetSampleRate() const noexcept
 	{
 		return inputDevice.EncodingProperties().SampleRate();
 	}
@@ -66,19 +86,19 @@ namespace winrt::Tuner::implementation
 	// Clear the buffer containing recorded samples
 	inline void AudioInput::ClearData() noexcept
 	{
-		audioBlock.clear();
+		audioBuffer.clear();
 	}
 
 	// Get raw pointer to recorded data
 	inline AudioInput::sample_t* AudioInput::GetRawData() noexcept
 	{
-		return audioBlock.data();
+		return audioBuffer.data();
 	}
 
 	// Get iterator to the first sample
 	inline std::vector<AudioInput::sample_t>::iterator AudioInput::FirstFrameIterator() noexcept
 	{
-		return audioBlock.begin();
+		return audioBuffer.begin();
 	}
 
 	inline std::lock_guard<std::mutex> AudioInput::LockAudioInputDevice() noexcept

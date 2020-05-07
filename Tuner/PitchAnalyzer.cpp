@@ -25,10 +25,10 @@ namespace winrt::Tuner::implementation
 
 	void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback) noexcept
 	{
-		dev.Initialize();
-
 		while (!quit.load()) {
 			if (dev.RecordedDataSize() >= SAMPLES_TO_ANALYZE) {
+				dev.Stop();
+				auto lock = dev.LockAudioInputDevice();
 				auto* sample = dev.GetRawData();
 				// Apply window function in 4 threads
 				DSP::WindowGenerator::ApplyWindow(sample, sample + SAMPLES_TO_ANALYZE, windowCoefficients.begin(), 4);
@@ -42,6 +42,7 @@ namespace winrt::Tuner::implementation
 				dev.ClearData();
 			}
 			// Sleep for the time needed to fill the buffer
+			dev.Start();
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000 * SAMPLES_TO_ANALYZE / dev.GetSampleRate()));
 		}
 	}
@@ -95,22 +96,15 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
-	PitchAnalyzer::PitchAnalyzer(float baseNoteFrequency, float minFrequency, float maxFrequency) :
+	PitchAnalyzer::PitchAnalyzer(float A4, float minFrequency, float maxFrequency) :
 		minFrequency{ minFrequency },
 		maxFrequency{ maxFrequency },
-		baseNoteFrequency{ baseNoteFrequency },
-		sampleRate{ 0 },
+		baseNoteFrequency{ A4 },
 		noteFrequencies{ InitializeNoteFrequenciesMap() }
 	{
 		quit.store(false);
-		fftResult.resize(SAMPLES_TO_ANALYZE / 2ULL + 1ULL);
-		fftPlan = fftwf_plan_dft_r2c_1d(
-			static_cast<int>(SAMPLES_TO_ANALYZE),
-			dev.GetRawData(),
-			reinterpret_cast<fftwf_complex*>(fftResult.data()),
-			FFTW_ESTIMATE);
-
-		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::Blackman, windowCoefficients.begin(), windowCoefficients.end());
+		//fftResult.resize(SAMPLES_TO_ANALYZE / 2ULL + 1ULL);
+		//dev.SetAudioBufferSize(SAMPLES_TO_ANALYZE);
 	}
 
 	PitchAnalyzer::~PitchAnalyzer()
@@ -126,5 +120,6 @@ namespace winrt::Tuner::implementation
 		}
 
 		fftwf_destroy_plan(fftPlan);
+		fftwf_cleanup();
 	}
 }
