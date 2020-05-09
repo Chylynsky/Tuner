@@ -1,6 +1,6 @@
 #pragma once
 #include "AudioInput.h"
-#include "WindowGenerator.h"
+#include "DSP.h"
 
 // Avoid name collisions
 #undef max
@@ -10,7 +10,7 @@ namespace winrt::Tuner::implementation
 {
 	class PitchAnalyzer
 	{
-		static constexpr size_t SAMPLES_TO_ANALYZE{ 1 << 15 };
+		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 15 };
 
 		struct PitchAnalysisResult
 		{
@@ -44,7 +44,7 @@ namespace winrt::Tuner::implementation
 		//	Template function that takes an input container of std::complex<T>, being the result of FFT and 
 		// returns the frequency of the first harmonic.
 		template<typename iter>
-		float GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept;
+		float GetFirstHarmonic(iter first, uint32_t sampling_freq) const noexcept;
 
 		// Function that takes an input container of std::complex<T>, being the result of FFTand returns
 		// a filled PitchAnalysisResult struct.
@@ -75,22 +75,27 @@ namespace winrt::Tuner::implementation
 	};
 
 	template<typename iter>
-	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, unsigned int sampling_freq) const noexcept
+	float PitchAnalyzer::GetFirstHarmonic(iter first, uint32_t sampling_freq) const noexcept
 	{
-		std::multimap<float, float> LUT;
-		size_t n = minFrequency * SAMPLES_TO_ANALYZE / sampling_freq;
+		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		const auto maxFreqIter = std::next(first, static_cast<diff_t>(1 + static_cast<uint32_t>(maxFrequency) * SAMPLES_TO_ANALYZE / sampling_freq));
+		uint32_t n = static_cast<uint32_t>(minFrequency) * SAMPLES_TO_ANALYZE / sampling_freq;
+		std::pair<float, float> highestAmplFreq{ 0.0, 0.0 };
+		std::pair<float, float> tmpAmplFreq{ 0.0, 0.0 };
 
 		// Check only frequencies in specified range
 		first += n;
-		const auto maxFreqIter = first + 1 + maxFrequency * SAMPLES_TO_ANALYZE / sampling_freq;
 
 		while (first != maxFreqIter) {
-			LUT.insert(std::make_pair(std::abs(*first), n * sampling_freq / SAMPLES_TO_ANALYZE));
+			tmpAmplFreq = { std::abs(*first), n * sampling_freq / SAMPLES_TO_ANALYZE };
+			if (tmpAmplFreq.first > highestAmplFreq.first) {
+				highestAmplFreq = tmpAmplFreq;
+			}
 			first++;
 			n++;
 		}
 
-		return LUT.rbegin()->second;
+		return highestAmplFreq.second;
 	}
 
 	// Sound analysis is performed on its own thread

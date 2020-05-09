@@ -34,7 +34,7 @@ namespace winrt::Tuner::implementation
 				// Apply window function in 4 threads
 				DSP::WindowGenerator::ApplyWindow(sample, sample + SAMPLES_TO_ANALYZE, windowCoefficients.begin(), 4);
 				fftwf_execute_dft_r2c(fftPlan, sample, reinterpret_cast<fftwf_complex*>(fftResult.data()));
-				float firstHarmonic{ GetFirstHarmonic(fftResult.begin(), fftResult.end(), audioInput.GetSampleRate()) };
+				float firstHarmonic{ GetFirstHarmonic(fftResult.begin(), audioInput.GetSampleRate()) };
 
 				if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
 					PitchAnalysisResult measurement{ GetNote(firstHarmonic) };

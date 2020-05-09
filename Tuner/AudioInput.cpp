@@ -52,7 +52,7 @@ namespace winrt::Tuner::implementation
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
 		AudioFrame frame = frameOutputNode.GetFrame();
-		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
+		Media::AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
 
 		unsigned char* byte = nullptr;

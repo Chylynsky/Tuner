@@ -4,6 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tuner", "Tuner\Tuner.vcxproj", "{E581278E-CEBE-4EC7-BA2C-2A44A496251A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2497D539-DE60-407B-908B-86933C1DC490} = {2497D539-DE60-407B-908B-86933C1DC490}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DSP", "DSP\DSP.vcxproj", "{2497D539-DE60-407B-908B-86933C1DC490}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +38,18 @@ Global
 		{E581278E-CEBE-4EC7-BA2C-2A44A496251A}.Release|x86.ActiveCfg = Release|Win32
 		{E581278E-CEBE-4EC7-BA2C-2A44A496251A}.Release|x86.Build.0 = Release|Win32
 		{E581278E-CEBE-4EC7-BA2C-2A44A496251A}.Release|x86.Deploy.0 = Release|Win32
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|ARM.ActiveCfg = Debug|ARM
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|ARM.Build.0 = Debug|ARM
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|x64.ActiveCfg = Debug|x64
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|x64.Build.0 = Debug|x64
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|x86.ActiveCfg = Debug|Win32
+		{2497D539-DE60-407B-908B-86933C1DC490}.Debug|x86.Build.0 = Debug|Win32
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|ARM.ActiveCfg = Release|ARM
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|ARM.Build.0 = Release|ARM
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|x64.ActiveCfg = Release|x64
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|x64.Build.0 = Release|x64
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|x86.ActiveCfg = Release|Win32
+		{2497D539-DE60-407B-908B-86933C1DC490}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
