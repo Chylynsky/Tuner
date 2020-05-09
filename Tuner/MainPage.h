@@ -15,6 +15,7 @@ namespace winrt::Tuner::implementation
         void MyProperty(int32_t value);
         winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float cents, float frequency);
         winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+        void Page_Unloaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
     };
 }
 

@@ -10,7 +10,7 @@ namespace winrt::Tuner::implementation
 {
 	class PitchAnalyzer
 	{
-		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 15 };
+		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 16 };
 
 		struct PitchAnalysisResult
 		{
@@ -27,7 +27,7 @@ namespace winrt::Tuner::implementation
 		// Map where key: frequency, value: note
 		const std::map<float, std::string> noteFrequencies;
 		// Result of Fast Fourier Transform
-		std::array<std::complex<float>, SAMPLES_TO_ANALYZE / 2ULL + 1ULL> fftResult;
+		std::array<std::complex<float>, SAMPLES_TO_ANALYZE / 2U + 1U> fftResult;
 		// Gaussian window coefficients
 		std::array<float, SAMPLES_TO_ANALYZE> windowCoefficients;
 
@@ -78,7 +78,7 @@ namespace winrt::Tuner::implementation
 	float PitchAnalyzer::GetFirstHarmonic(iter first, uint32_t sampling_freq) const noexcept
 	{
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
-		const auto maxFreqIter = std::next(first, static_cast<diff_t>(1 + static_cast<uint32_t>(maxFrequency) * SAMPLES_TO_ANALYZE / sampling_freq));
+		const iter maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<uint32_t>(maxFrequency) * SAMPLES_TO_ANALYZE / sampling_freq));
 		uint32_t n = static_cast<uint32_t>(minFrequency) * SAMPLES_TO_ANALYZE / sampling_freq;
 		std::pair<float, float> highestAmplFreq{ 0.0, 0.0 };
 		std::pair<float, float> tmpAmplFreq{ 0.0, 0.0 };
@@ -111,7 +111,7 @@ namespace winrt::Tuner::implementation
 			reinterpret_cast<fftwf_complex*>(fftResult.data()),
 			FFTW_MEASURE);
 
-		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::Blackman, windowCoefficients.begin(), windowCoefficients.end());
+		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::BlackmanHarris, windowCoefficients.begin(), windowCoefficients.end());
 		pitchAnalysisThread = std::thread(&PitchAnalyzer::Analyze, this, callback);
 
 		// Start recording input
