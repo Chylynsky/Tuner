@@ -172,6 +172,7 @@
     <ClInclude Include="MainPage.h">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="PitchAnalysisBuffer.h" />
     <ClInclude Include="PitchAnalyzer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -208,6 +209,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="PitchAnalysisBuffer.cpp" />
     <ClCompile Include="PitchAnalyzer.cpp" />
   </ItemGroup>
   <ItemGroup>

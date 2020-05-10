@@ -17,11 +17,13 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="AudioInput.cpp" />
     <ClCompile Include="PitchAnalyzer.cpp" />
+    <ClCompile Include="PitchAnalysisBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="AudioInput.h" />
     <ClInclude Include="PitchAnalyzer.h" />
+    <ClInclude Include="PitchAnalysisBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">

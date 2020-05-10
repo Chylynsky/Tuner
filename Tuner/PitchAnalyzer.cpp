@@ -23,28 +23,18 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	void PitchAnalyzer::Analyze(std::function<void(const std::string&, float, float)> callback) noexcept
+	void PitchAnalyzer::Analyze(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept
 	{
-		while (!quitAnalysis.load()) {
-			if (audioInput.RecordedDataSize() >= SAMPLES_TO_ANALYZE) {
-				audioInput.Stop();
-				auto lock = audioInput.LockAudioInputDevice();
-				auto* sample = audioInput.GetRawPtr();
+		float* first = pitchAnalysisBuffer->audioBuffer.data();
+		float* last = first + SAMPLES_TO_ANALYZE;
+		// Apply window function in 4 threads
+		DSP::WindowGenerator::ApplyWindow(first, last, windowCoefficients.begin(), 4);
+		pitchAnalysisBuffer->ExecuteFFT();
+		float firstHarmonic{ GetFirstHarmonic(pitchAnalysisBuffer->fftResult.begin(), audioInput.GetSampleRate()) };
 
-				// Apply window function in 4 threads
-				DSP::WindowGenerator::ApplyWindow(sample, sample + SAMPLES_TO_ANALYZE, windowCoefficients.begin(), 4);
-				fftwf_execute_dft_r2c(fftPlan, sample, reinterpret_cast<fftwf_complex*>(fftResult.data()));
-				float firstHarmonic{ GetFirstHarmonic(fftResult.begin(), audioInput.GetSampleRate()) };
-
-				if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
-					PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
-					callback(measurement.note, measurement.cents, firstHarmonic);
-				}
-				audioInput.ClearData();
-			}
-			// Sleep for the time needed to fill the buffer
-			audioInput.Start();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000 * SAMPLES_TO_ANALYZE / audioInput.GetSampleRate()));
+		if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
+			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
+			soundAnalyzedCallback(measurement.note, measurement.cents, firstHarmonic);
 		}
 	}
 
@@ -97,29 +87,29 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
+	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalysisBuffer* args)
+	{
+		// Run analysis asynchronously
+		std::async(std::bind(&PitchAnalyzer::Analyze, this, args));
+		// Push analyzed buffer to the end of the queue
+		pitchAnalysisBufferQueue.push(args);
+		// Attach new buffer
+		sender.AttachBuffer(pitchAnalysisBufferQueue.front());
+	}
+
 	PitchAnalyzer::PitchAnalyzer(float A4, float minFrequency, float maxFrequency) :
 		minFrequency{ minFrequency },
 		maxFrequency{ maxFrequency },
 		baseNoteFrequency{ A4 },
-		noteFrequencies{ InitializeNoteFrequenciesMap() },
-		quitAnalysis{ false }
+		noteFrequencies{ InitializeNoteFrequenciesMap() }
 	{
-
+		// Add buffers to queue
+		for (PitchAnalysisBuffer& pitchAnalysisBuffer : pitchAnalysisBufferArray) {
+			pitchAnalysisBufferQueue.push(&pitchAnalysisBuffer);
+		}
 	}
 
 	PitchAnalyzer::~PitchAnalyzer()
 	{
-		// Terminate the infinite loop
-		if (!quitAnalysis.load()) {
-			quitAnalysis.store(true);
-		}
-
-		// Join the thread
-		if (pitchAnalysisThread.joinable()) {
-			pitchAnalysisThread.join();
-		}
-
-		fftwf_destroy_plan(fftPlan);
-		fftwf_cleanup();
 	}
 }

@@ -36,5 +36,7 @@
 #include <functional>
 #include <mutex>
 #include <atomic>
+#include <queue>
 #include <map>
+#include <future>
 #include "fftw3.h"

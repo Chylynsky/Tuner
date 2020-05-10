@@ -1,4 +1,5 @@
 #pragma once
+#include "PitchAnalysisBuffer.h"
 
 namespace winrt::Tuner::implementation
 {
@@ -11,12 +12,22 @@ namespace winrt::Tuner::implementation
 	class AudioInput
 	{
 		using sample_t = float;
+		using BufferFilledCallback = std::function<void(AudioInput& sender, PitchAnalysisBuffer* args)>;
+
+		// BufferFilled event handler
+		BufferFilledCallback bufferFilledCallback;
 
 		winrt::Windows::Media::Audio::AudioGraph audioGraph;
 		winrt::Windows::Media::Audio::AudioGraphSettings audioSettings;
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
-		std::vector<sample_t> audioBuffer;
+
+		PitchAnalysisBuffer* pitchAnalysisBuffer;
+		// Helper pointers
+		float* first;
+		float* last;
+		float* current;
+		
 		std::mutex audioInputMutex;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
@@ -32,22 +43,17 @@ namespace winrt::Tuner::implementation
 		void Start() const noexcept;
 		// Stop recording audio data
 		void Stop() const noexcept;
-		// Set the size of audio buffer
-		void SetAudioBufferSize(size_t newSize);
+
+		void AttachBuffer(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept;
+
+		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
+
 		// Get the number of recorded samples
-		size_t RecordedDataSize() const noexcept;
+		uint32_t RecordedDataSize() const noexcept;
 		// Get current sample rate
 		uint32_t GetSampleRate() const noexcept;
 		// Get current bit depth
 		uint32_t GetBitDepth() const;
-		// Clear the buffer containing recorded samples
-		void ClearData() noexcept;
-		// Get raw pointer to recorded data
-		sample_t* GetRawPtr() noexcept;
-		// Get iterator to the first sample
-		std::vector<sample_t>::iterator FirstFrameIterator() noexcept;
-		// Lock resource
-		std::lock_guard<std::mutex> LockAudioInputDevice() noexcept;
 	};
 
 	inline void AudioInput::Start() const noexcept
@@ -60,15 +66,22 @@ namespace winrt::Tuner::implementation
 		audioGraph.Stop();
 	}
 
-	inline void AudioInput::SetAudioBufferSize(size_t newSize)
+	inline void AudioInput::AttachBuffer(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept
 	{
-		audioBuffer.resize(newSize);
+		this->pitchAnalysisBuffer = pitchAnalysisBuffer;
+		first = current = pitchAnalysisBuffer->audioBuffer.data();
+		last = first + SAMPLES_TO_ANALYZE;
+	}
+
+	inline void AudioInput::BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept
+	{
+		this->bufferFilledCallback = bufferFilledCallback;
 	}
 
 	// Get the number of recorded samples
-	inline size_t AudioInput::RecordedDataSize() const noexcept
+	inline uint32_t AudioInput::RecordedDataSize() const noexcept
 	{
-		return audioBuffer.size();
+		return static_cast<uint32_t>(current - first);
 	}
 
 	// Get current sample rate
@@ -81,28 +94,5 @@ namespace winrt::Tuner::implementation
 	inline uint32_t AudioInput::GetBitDepth() const
 	{
 		return inputDevice.EncodingProperties().BitsPerSample();
-	}
-
-	// Clear the buffer containing recorded samples
-	inline void AudioInput::ClearData() noexcept
-	{
-		audioBuffer.clear();
-	}
-
-	// Get raw pointer to recorded data
-	inline AudioInput::sample_t* AudioInput::GetRawPtr() noexcept
-	{
-		return audioBuffer.data();
-	}
-	
-	// Get iterator to the first sample
-	inline std::vector<AudioInput::sample_t>::iterator AudioInput::FirstFrameIterator() noexcept
-	{
-		return audioBuffer.begin();
-	}
-
-	inline std::lock_guard<std::mutex> AudioInput::LockAudioInputDevice() noexcept
-	{
-		return std::lock_guard<std::mutex>(audioInputMutex);
 	}
 }

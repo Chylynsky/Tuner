@@ -1,2 +1,2 @@
 ﻿#pragma once
-#include "WindowGenerator.h"
+//#include "WindowGenerator.h"

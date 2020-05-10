@@ -63,20 +63,25 @@ namespace winrt::Tuner::implementation
 		byteAccess->GetBuffer(&byte, &capacity);
 
 		WINRT_ASSERT(byte);
-
-		// Fill the audioBlock with recorded audio data
-		auto lock{ LockAudioInputDevice() };
-		audioBuffer.insert(audioBuffer.end(), reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()));
+	
+		if (current + buffer.Length() < last) {
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
+			current += buffer.Length();
+		}
+		else {
+			auto distance{ last - current };
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
+			bufferFilledCallback(*this, pitchAnalysisBuffer);
+			current += distance;
+		}
 	}
 
-	AudioInput::AudioInput() : audioGraph{ nullptr }, audioSettings{ nullptr }, inputDevice{ nullptr }, frameOutputNode{ nullptr }
+	AudioInput::AudioInput() : audioGraph{ nullptr }, audioSettings{ nullptr }, inputDevice{ nullptr }, frameOutputNode{ nullptr }, bufferFilledCallback{ nullptr }
 	{
-
 	}
 
 	AudioInput::~AudioInput()
 	{
 		audioGraph.Close();
-		audioBuffer.clear();
 	}
 }
