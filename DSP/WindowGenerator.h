@@ -91,9 +91,8 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = static_cast<value_t>(1) - std::abs((n - static_cast<value_t>(N) / static_cast<value_t>(2)) / static_cast<value_t>(N));
 			first++;
@@ -108,9 +107,8 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = static_cast<value_t>(1) - std::pow((n - static_cast<value_t>(N) / static_cast<value_t>(2)) / (static_cast<value_t>(N) / static_cast<value_t>(2)), 2);
 			first++;
@@ -145,9 +143,8 @@ namespace DSP
 		constexpr value_t a1 = 1 - a0;
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = a0 + a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N));
 			first++;
@@ -166,9 +163,8 @@ namespace DSP
 		constexpr value_t a2 = static_cast<value_t>(1430) / static_cast<value_t>(18608);
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N));
 			first++;
@@ -188,9 +184,8 @@ namespace DSP
 		constexpr value_t a3 = 0.0106411;
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N)) - a3 * std::cos(static_cast<value_t>(6) * pi<value_t> * n / static_cast<value_t>(N));
 			first++;
@@ -210,9 +205,8 @@ namespace DSP
 		constexpr value_t a3 = 0.01168;
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N)) - a3 * std::cos(static_cast<value_t>(6) * pi<value_t> * n / static_cast<value_t>(N));
 			first++;

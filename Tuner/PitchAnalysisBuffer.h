@@ -2,15 +2,19 @@
 
 namespace winrt::Tuner::implementation
 {
-	constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 18 };
-
 	struct PitchAnalysisBuffer
 	{
+		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 18 };
+
+		std::mutex mtx;
+
 		fftwf_plan fftPlan;
-		std::array<float, SAMPLES_TO_ANALYZE> audioBuffer;
-		std::array<std::complex<float>, SAMPLES_TO_ANALYZE / 2U + 1U> fftResult;
+		std::vector<float> audioBuffer;
+		std::vector<std::complex<float>> fftResult;
 
 		PitchAnalysisBuffer() {
+			audioBuffer.resize(SAMPLES_TO_ANALYZE);
+			fftResult.resize(SAMPLES_TO_ANALYZE / 2U + 1U);
 			fftPlan = fftwf_plan_dft_r2c_1d(
 				static_cast<int>(SAMPLES_TO_ANALYZE),
 				audioBuffer.data(),
@@ -24,6 +28,10 @@ namespace winrt::Tuner::implementation
 
 		void ExecuteFFT() {
 			fftwf_execute(fftPlan);
+		}
+
+		std::lock_guard<std::mutex> LockBuffer() {
+			return std::lock_guard<std::mutex>(mtx);
 		}
 	};
 }

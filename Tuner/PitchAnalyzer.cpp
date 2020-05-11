@@ -26,16 +26,19 @@ namespace winrt::Tuner::implementation
 	void PitchAnalyzer::Analyze(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept
 	{
 		float* first = pitchAnalysisBuffer->audioBuffer.data();
-		float* last = first + SAMPLES_TO_ANALYZE;
-		// Apply window function in 4 threads
-		DSP::WindowGenerator::ApplyWindow(first, last, windowCoefficients.begin(), 4);
+		float* last = first + pitchAnalysisBuffer->audioBuffer.size();
+
+		DSP::WindowGenerator::ApplyWindow(first, last, windowCoefficients.begin(), 1);
 		pitchAnalysisBuffer->ExecuteFFT();
-		float firstHarmonic{ GetFirstHarmonic(pitchAnalysisBuffer->fftResult.begin(), audioInput.GetSampleRate()) };
+		float firstHarmonic{ GetFirstHarmonic(pitchAnalysisBuffer->fftResult.begin(), pitchAnalysisBuffer->fftResult.end(), audioInput.GetSampleRate()) };
 
 		if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
 			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
 			soundAnalyzedCallback(measurement.note, measurement.cents, firstHarmonic);
 		}
+
+		// Push analyzed buffer to the end of the queue
+		pitchAnalysisBufferQueue.push(pitchAnalysisBuffer);
 	}
 
 	std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
@@ -89,12 +92,12 @@ namespace winrt::Tuner::implementation
 
 	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalysisBuffer* args)
 	{
-		// Run analysis asynchronously
-		std::async(std::bind(&PitchAnalyzer::Analyze, this, args));
-		// Push analyzed buffer to the end of the queue
-		pitchAnalysisBufferQueue.push(args);
 		// Attach new buffer
 		sender.AttachBuffer(pitchAnalysisBufferQueue.front());
+		pitchAnalysisBufferQueue.pop();
+
+		// Run analysis asynchronously
+		std::async(std::launch::async, std::bind(&PitchAnalyzer::Analyze, this, args));
 	}
 
 	PitchAnalyzer::PitchAnalyzer(float A4, float minFrequency, float maxFrequency) :
@@ -103,6 +106,8 @@ namespace winrt::Tuner::implementation
 		baseNoteFrequency{ A4 },
 		noteFrequencies{ InitializeNoteFrequenciesMap() }
 	{
+		windowCoefficients.resize(PitchAnalysisBuffer::SAMPLES_TO_ANALYZE);
+
 		// Add buffers to queue
 		for (PitchAnalysisBuffer& pitchAnalysisBuffer : pitchAnalysisBufferArray) {
 			pitchAnalysisBufferQueue.push(&pitchAnalysisBuffer);

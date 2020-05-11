@@ -31,7 +31,7 @@ namespace winrt::Tuner::implementation
 		// Map where key: frequency, value: note
 		const std::map<float, std::string> noteFrequencies;
 		// Gaussian window coefficients
-		std::array<float, SAMPLES_TO_ANALYZE> windowCoefficients;
+		std::vector<float> windowCoefficients;
 
 		// Audio recording device
 		AudioInput audioInput;
@@ -44,7 +44,7 @@ namespace winrt::Tuner::implementation
 		//	Template function that takes an input container of std::complex<T>, being the result of FFT and 
 		// returns the frequency of the first harmonic.
 		template<typename iter>
-		float GetFirstHarmonic(iter first, uint32_t sampling_freq) const noexcept;
+		float GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept;
 
 		// Function takes frequency and returns PitchAnalysisResult object
 		PitchAnalysisResult GetNote(float frequency) const noexcept;
@@ -68,11 +68,17 @@ namespace winrt::Tuner::implementation
 	};
 
 	template<typename iter>
-	float PitchAnalyzer::GetFirstHarmonic(iter first, uint32_t sampling_freq) const noexcept
+	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept
 	{
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
-		const iter maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<uint32_t>(maxFrequency) * SAMPLES_TO_ANALYZE / sampling_freq));
-		uint32_t n = static_cast<uint32_t>(minFrequency) * SAMPLES_TO_ANALYZE / sampling_freq;
+
+		// Number of samples
+		const diff_t N = std::distance<iter>(first, last);
+		// Iterator to the upper frequency boundary
+		const iter maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<uint32_t>(maxFrequency) * N / sampling_freq));
+		
+		uint32_t n = static_cast<uint32_t>(minFrequency) * N / sampling_freq;
+
 		std::pair<float, float> highestAmplFreq{ 0.0, 0.0 };
 		std::pair<float, float> tmpAmplFreq{ 0.0, 0.0 };
 
@@ -80,7 +86,7 @@ namespace winrt::Tuner::implementation
 		first += n;
 
 		while (first != maxFreqIter) {
-			tmpAmplFreq = { std::abs(*first), n * sampling_freq / SAMPLES_TO_ANALYZE };
+			tmpAmplFreq = { std::abs(*first), n * sampling_freq / N };
 			if (tmpAmplFreq.first > highestAmplFreq.first) {
 				highestAmplFreq = tmpAmplFreq;
 			}

@@ -63,7 +63,7 @@ namespace winrt::Tuner::implementation
 		byteAccess->GetBuffer(&byte, &capacity);
 
 		WINRT_ASSERT(byte);
-	
+		
 		if (current + buffer.Length() < last) {
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
 			current += buffer.Length();

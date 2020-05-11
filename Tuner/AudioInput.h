@@ -70,7 +70,7 @@ namespace winrt::Tuner::implementation
 	{
 		this->pitchAnalysisBuffer = pitchAnalysisBuffer;
 		first = current = pitchAnalysisBuffer->audioBuffer.data();
-		last = first + SAMPLES_TO_ANALYZE;
+		last = first + pitchAnalysisBuffer->audioBuffer.size();
 	}
 
 	inline void AudioInput::BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept

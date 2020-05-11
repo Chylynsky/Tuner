@@ -10,7 +10,7 @@ using namespace Windows::Foundation;
 
 namespace winrt::Tuner::implementation
 {
-	MainPage::MainPage() : pitchAnalyzer{ 440.0f, 20.0f, 8000.0f }
+	MainPage::MainPage() : pitchAnalyzer{ 440.0f, 20.0f, 1320.0f }
     {
         InitializeComponent();
     }
@@ -87,6 +87,7 @@ namespace winrt::Tuner::implementation
 
 	IAsyncAction MainPage::Page_Loaded(IInspectable const& sender, RoutedEventArgs const& e)
 	{
+		// Attach SoundAnalyzed_Callback, called when each analysis is finished
 		co_await pitchAnalyzer.Run(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
 	}
 }
