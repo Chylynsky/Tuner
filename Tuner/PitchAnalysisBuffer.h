@@ -4,7 +4,7 @@ namespace winrt::Tuner::implementation
 {
 	struct PitchAnalysisBuffer
 	{
-		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 18 };
+		static constexpr int32_t SAMPLES_TO_ANALYZE{ 1 << 14 };
 
 		std::mutex mtx;
 

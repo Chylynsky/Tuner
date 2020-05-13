@@ -64,6 +64,7 @@ namespace winrt::Tuner::implementation
 
 		WINRT_ASSERT(byte);
 		
+		//auto lock = pitchAnalysisBuffer->LockBuffer();
 		if (current + buffer.Length() < last) {
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
 			current += buffer.Length();

@@ -2,6 +2,7 @@
 #include "AudioInput.h"
 #include "PitchAnalysisBuffer.h"
 #include "WindowGenerator.h"
+#include "FilterGenerator.h"
 
 #ifdef max
 #undef max
@@ -36,15 +37,22 @@ namespace winrt::Tuner::implementation
 		// Audio recording device
 		AudioInput audioInput;
 
-		std::array<PitchAnalysisBuffer, 4> pitchAnalysisBufferArray;
+		std::array<PitchAnalysisBuffer, 2> pitchAnalysisBufferArray;
 		std::queue<PitchAnalysisBuffer*> pitchAnalysisBufferQueue;
 
 		SoundAnalyzedCallback soundAnalyzedCallback;
 
-		//	Template function that takes an input container of std::complex<T>, being the result of FFT and 
+		// Template function that takes an input container of std::complex<T>, being the result of FFT and 
 		// returns the frequency of the first harmonic.
 		template<typename iter>
-		float GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept;
+		float GetFirstHarmonic(iter first, iter last, uint32_t samplingFrequency) const noexcept;
+
+		// Returns an index of a sample with the highest peak
+		template<typename iter, typename diff_t = typename std::iterator_traits<iter>::difference_type>
+		diff_t GetPeakQuefrency(iter first, iter last, uint32_t samplingFrequency) const noexcept;
+
+		template<typename T, typename T2>
+		float QuefrencyToFrequncy(T quefrency, T2 samplingFrequency) const noexcept;
 
 		// Function takes frequency and returns PitchAnalysisResult object
 		PitchAnalysisResult GetNote(float frequency) const noexcept;
@@ -67,17 +75,24 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Foundation::IAsyncAction Run(SoundAnalyzedCallback soundAnalyzedCallback) noexcept;
 	};
 
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	//										TEMPLATE DEFINITIONS
+	//
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	template<typename iter>
-	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, uint32_t sampling_freq) const noexcept
+	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, uint32_t samplingFrequency) const noexcept
 	{
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		// Number of samples
 		const diff_t N = std::distance<iter>(first, last);
 		// Iterator to the upper frequency boundary
-		const iter maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<uint32_t>(maxFrequency) * N / sampling_freq));
+		const iter maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<uint32_t>(maxFrequency) * N / samplingFrequency));
 		
-		uint32_t n = static_cast<uint32_t>(minFrequency) * N / sampling_freq;
+		// Index of the sample representing lower frequency bound
+		uint32_t n = static_cast<uint32_t>(minFrequency) * N / samplingFrequency;
 
 		std::pair<float, float> highestAmplFreq{ 0.0, 0.0 };
 		std::pair<float, float> tmpAmplFreq{ 0.0, 0.0 };
@@ -86,7 +101,7 @@ namespace winrt::Tuner::implementation
 		first += n;
 
 		while (first != maxFreqIter) {
-			tmpAmplFreq = { std::abs(*first), n * sampling_freq / N };
+			tmpAmplFreq = std::make_pair(std::abs(*first), n * samplingFrequency / N);
 			if (tmpAmplFreq.first > highestAmplFreq.first) {
 				highestAmplFreq = tmpAmplFreq;
 			}
@@ -97,20 +112,39 @@ namespace winrt::Tuner::implementation
 		return highestAmplFreq.second;
 	}
 
-	// Sound analysis is performed on its own thread
-	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run(PitchAnalyzer::SoundAnalyzedCallback soundAnalyzedCallback) noexcept
+	template<typename iter, typename diff_t>
+	diff_t PitchAnalyzer::GetPeakQuefrency(iter first, iter last, uint32_t samplingFrequency) const noexcept
 	{
-		// Initialize AudioInput object
-		co_await audioInput.Initialize();
-		// Attach callback
-		this->soundAnalyzedCallback = soundAnalyzedCallback;
-		// Get first buffer from queue and attach it to AudioInput class object
-		audioInput.AttachBuffer(pitchAnalysisBufferQueue.front());
-		// Pass function as callback
-		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, this, std::placeholders::_1, std::placeholders::_2));
-		// Generate window coefficients
-		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::BlackmanHarris, windowCoefficients.begin(), windowCoefficients.end());
-		// Start recording input
-		audioInput.Start();
+		// Number of samples
+		const diff_t N = std::distance<iter>(first, last);
+		// Iterator to the upper quefrency bound
+		const iter maxQuefIter = first + static_cast<diff_t>(samplingFrequency / static_cast<diff_t>(minFrequency));
+
+		assert(maxQuefIter < last);
+
+		// Index of the lower quefrency bound
+		diff_t n = static_cast<diff_t>(samplingFrequency) / static_cast<diff_t>(maxFrequency);
+		// Advance to the lower quefrency bound
+		first += n;
+
+		std::pair<float, diff_t> highestAmplQuef{ 0.0, 0 };
+		std::pair<float, diff_t> currAmplQuef{ 0.0, 0 };
+
+		while (first != maxQuefIter) {
+			currAmplQuef = std::make_pair(std::abs(*first), samplingFrequency / n);
+			if (currAmplQuef.first > highestAmplQuef.first) {
+				highestAmplQuef = currAmplQuef;
+			}
+			first++;
+			n++;
+		}
+
+		return highestAmplQuef.second;;
+	}
+
+	template<typename T, typename T2>
+	inline float PitchAnalyzer::QuefrencyToFrequncy(T quefrency, T2 samplingFrequency) const noexcept
+	{
+		return static_cast<float>(samplingFrequency) / static_cast<float>(quefrency);
 	}
 }

@@ -7,16 +7,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DSP.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="WindowGenerator.cpp" />
-    <ClCompile Include="Interpolation.cpp" />
+    <ClCompile Include="FilterGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DSP.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WindowGenerator.h" />
-    <ClInclude Include="Interpolation.h" />
+    <ClInclude Include="FilterGenerator.h" />
+    <ClInclude Include="DSPMath.h" />
   </ItemGroup>
 </Project>

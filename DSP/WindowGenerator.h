@@ -1,12 +1,10 @@
 #pragma once
+#include "DSPMath.h"
 
 namespace DSP
 {
 	class WindowGenerator
 	{
-		template<typename value_t>
-		static constexpr value_t pi{ 3.141592653589793 };
-
 		// Generate Gaussian window coefficients
 		template<typename iter>
 		static void GenerateGaussianWindow(iter first, iter last) noexcept;
@@ -71,6 +69,7 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		constexpr value_t alpha{ 2.5 };
 		const diff_t N = std::distance<iter>(first, last);
@@ -79,7 +78,7 @@ namespace DSP
 		value_t n = -step;
 		while (first != last) {
 			*(first) = std::exp(static_cast<value_t>(-0.5) * std::pow((alpha * n / step), 2));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -89,13 +88,14 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		const diff_t N = std::distance<iter>(first, last);
 
 		value_t n = 0;
 		while (first != last) {
 			*first = static_cast<value_t>(1) - std::abs((n - static_cast<value_t>(N) / static_cast<value_t>(2)) / static_cast<value_t>(N));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -105,13 +105,14 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		const diff_t N = std::distance<iter>(first, last);
 
 		value_t n = 0;
 		while (first != last) {
 			*first = static_cast<value_t>(1) - std::pow((n - static_cast<value_t>(N) / static_cast<value_t>(2)) / (static_cast<value_t>(N) / static_cast<value_t>(2)), 2);
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -121,14 +122,14 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		const diff_t N = std::distance<iter>(first, last);
-		const value_t step = static_cast<value_t>(N - 1) / static_cast<value_t>(2);
-		value_t n = -step;
 
+		value_t n = 0;
 		while (first != last) {
 			*first = std::pow(std::sin((pi<value_t> * n / static_cast<value_t>(N))), 2);
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -138,6 +139,7 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		constexpr value_t a0 = static_cast<value_t>(25) / static_cast<value_t>(46);
 		constexpr value_t a1 = 1 - a0;
@@ -147,7 +149,7 @@ namespace DSP
 		value_t n = 0;
 		while (first != last) {
 			*first = a0 + a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -157,6 +159,7 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		constexpr value_t a0 = static_cast<value_t>(7938) / static_cast<value_t>(18608);
 		constexpr value_t a1 = static_cast<value_t>(9240) / static_cast<value_t>(18608);
@@ -167,7 +170,7 @@ namespace DSP
 		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -177,6 +180,7 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		constexpr value_t a0 = 0.3635819;
 		constexpr value_t a1 = 0.4891775;
@@ -188,7 +192,7 @@ namespace DSP
 		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N)) - a3 * std::cos(static_cast<value_t>(6) * pi<value_t> * n / static_cast<value_t>(N));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -198,6 +202,7 @@ namespace DSP
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		constexpr value_t a0 = 0.35875;
 		constexpr value_t a1 = 0.48829;
@@ -209,7 +214,7 @@ namespace DSP
 		value_t n = 0;
 		while (first != last) {
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N)) - a3 * std::cos(static_cast<value_t>(6) * pi<value_t> * n / static_cast<value_t>(N));
-			first++;
+			std::advance(first, 1);
 			n++;
 		}
 	}
@@ -219,8 +224,8 @@ namespace DSP
 	{
 		while (samplesFirst != samplesLast) {
 			*samplesFirst *= *windowFirst;
-			samplesFirst++;
-			windowFirst++;
+			std::advance(samplesFirst, 1);
+			std::advance(windowFirst, 1);
 		}
 	}
 
@@ -248,11 +253,15 @@ namespace DSP
 		const diff_t N = std::distance<iter1>(samplesFirst, samplesLast);
 		const diff_t step = N / static_cast<diff_t>(threadCount);
 
+		if (threadCount == 1) {
+			WindowGenerator::_ApplyWindow(samplesFirst, samplesLast, windowFirst);
+			return;
+		}
+
 		// Number of samples must be higher and dividable by the number of threads.
 		assert(N % threadCount == 0 && N > threadCount);
 
 		std::vector<std::thread> threadPool(threadCount);
-
 		diff_t i = 0;
 		for (std::thread& thread : threadPool) {
 			thread = std::thread([=]() {
