@@ -64,15 +64,14 @@ namespace winrt::Tuner::implementation
 
 		WINRT_ASSERT(byte);
 		
-		//auto lock = pitchAnalysisBuffer->LockBuffer();
 		if (current + buffer.Length() < last) {
-			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
+			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
 			current += buffer.Length();
 		}
 		else {
-			auto distance{ last - current };
-			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
-			bufferFilledCallback(*this, pitchAnalysisBuffer);
+			auto distance = last - current;
+			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
+			bufferFilledCallback(*this, audioBufferIters);
 			current += distance;
 		}
 	}

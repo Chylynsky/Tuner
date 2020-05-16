@@ -23,44 +23,53 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	void PitchAnalyzer::Analyze(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept
+	void PitchAnalyzer::Analyze(AudioBufferIteratorPair audioBufferIters) noexcept
 	{
-		std::vector<double> filter(120);
-		DSP::GenerateBandpassFIR(100, 600, 48000, filter.begin(), filter.end(), DSP::WindowGenerator::WindowType::Blackman);
+		auto lock = std::lock_guard<std::mutex>(pitchAnalyzerMtx);
 
-		// auto lock = pitchAnalysisBuffer->LockBuffer();
 		// Get helper pointers
-		size_t audioBufferSize				= pitchAnalysisBuffer->audioBuffer.size();
-		float* audioBufferFirst				= pitchAnalysisBuffer->audioBuffer.data();
-		float* audioBufferLast				= audioBufferFirst + audioBufferSize;
-		size_t fftResultSize				= pitchAnalysisBuffer->fftResult.size();
-		std::complex<float>* fftResultFirst = pitchAnalysisBuffer->fftResult.data();
-		std::complex<float>* fftResultLast	= fftResultFirst + fftResultSize;
+		sample_t* audioBufferFirst			= audioBufferIters.first;
+		sample_t* outputFirst				= outputSignal.data();
+		sample_t* outputLast				= outputFirst + OUTPUT_SIGNAL_SIZE;
+		complex_t* filterFreqResponseFirst	= filterFreqResponse.data();
+		complex_t* fftResultFirst			= fftResult.data();
+		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;
 
-		// Apply the window function
-		DSP::WindowGenerator::ApplyWindow(audioBufferFirst, audioBufferLast, windowCoefficients.begin(), 1);
+		// Execute FFT on the input signal
+		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+	
+		// Apply FIR filter to the input signal
+		std::transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst,  std::multiplies<complex_t>());
 
-		pitchAnalysisBuffer->ExecuteFFT();
-
+		/*
 		// Prepare the FFT result for cepstrum calculation
-		for (size_t i = 0; i < fftResultSize; i++) {
-			audioBufferFirst[i] = audioBufferFirst[fftResultSize + i] = std::log(std::pow(std::abs(fftResultFirst[i]), 2));
+		for (size_t i = 0; i < FFT_RESULT_SIZE; i++) {
+			fftResultFirst[i] = std::log(std::abs(fftResultFirst[i]));
 		}
-
+		
 		// Perform a second Fourier Transform
-		pitchAnalysisBuffer->ExecuteFFT();
-
+		//fftwf_execute_dft_r2c(fftPlan, outputFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+		fftwf_execute_dft_c2r(fftPlan, reinterpret_cast<fftwf_complex*>(fftResultFirst), outputFirst);
+		
 		uint32_t sampleRate		= audioInput.GetSampleRate();
 		uint32_t peakQuefrency	= static_cast<uint32_t>(GetPeakQuefrency(fftResultFirst, fftResultLast, sampleRate));
 		float firstHarmonic		= QuefrencyToFrequncy(peakQuefrency, sampleRate);
+		*/
 
-		if (firstHarmonic >= minFrequency && firstHarmonic <= maxFrequency) {
+		float firstHarmonic = GetFirstHarmonic(fftResultFirst, fftResultLast, audioInput.GetSampleRate());
+
+		// Check if frequency of the peak is in the requested range
+		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
 			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
 			soundAnalyzedCallback(measurement.note, measurement.cents, firstHarmonic);
 		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		// Push analyzed buffer to the end of the queue
+		audioBufferIterPairQueue.push(audioBufferIters);
 	}
 
-	std::map<float, std::string> PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
+	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
 	{
 		// Constant needed for note frequencies calculation
 		const float a{ std::pow(2.0f, 1.0f / 12.0f) };
@@ -68,14 +77,14 @@ namespace winrt::Tuner::implementation
 		const auto baseNoteIter{ std::next(octave.begin(), 9) };
 
 		auto octaveIter{ baseNoteIter };
-		float currentFrequency{ baseNoteFrequency };
+		float currentFrequency{ BASE_NOTE_FREQUENCY };
 		int currentOctave{ 4 };
 		int halfSteps{ 0 };
 		std::map<float, std::string> result;
 
 		// Fill a map for notes below and equal AA
-		while (currentFrequency >= minFrequency) {
-			currentFrequency = baseNoteFrequency * std::pow(a, halfSteps);
+		while (currentFrequency >= MIN_FREQUENCY) {
+			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps--;
 
@@ -93,14 +102,14 @@ namespace winrt::Tuner::implementation
 		currentOctave = 4;
 
 		// Fill a map for notes below and equal AA
-		while (currentFrequency <= maxFrequency) {
+		while (currentFrequency <= MAX_FREQUENCY) {
 
 			if (octaveIter == octave.end()) {
 				octaveIter = octave.begin();
 				currentOctave++;
 			}
 
-			currentFrequency = baseNoteFrequency * std::pow(a, halfSteps);
+			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps++;
 			octaveIter++;
@@ -109,47 +118,76 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
-	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalysisBuffer* args)
+	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalyzer::AudioBufferIteratorPair args)
 	{
+		assert(audioBufferIterPairQueue.size() > 0);
+
 		// Attach new buffer
-		sender.AttachBuffer(pitchAnalysisBufferQueue.front());
-		pitchAnalysisBufferQueue.pop();
+		sender.AttachBuffer(GetNextAudioBufferIters());
 		// Run harmonic analysis
-		Analyze(args);
-		// Push analyzed buffer to the end of the queue
-		pitchAnalysisBufferQueue.push(args);
+		std::async(std::launch::async, std::bind(&PitchAnalyzer::Analyze, this, args));
 	}
 
-	PitchAnalyzer::PitchAnalyzer(float A4, float minFrequency, float maxFrequency) :
-		minFrequency{ minFrequency },
-		maxFrequency{ maxFrequency },
-		baseNoteFrequency{ A4 },
-		noteFrequencies{ InitializeNoteFrequenciesMap() }
+	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
 	{
-		windowCoefficients.resize(PitchAnalysisBuffer::SAMPLES_TO_ANALYZE);
+		/*
+			All vectors holding real values are resized to OUTPUT_SIGNAL_SIZE,
+			which results in zero padding.
+		*/
 
 		// Add buffers to queue
-		for (PitchAnalysisBuffer& pitchAnalysisBuffer : pitchAnalysisBufferArray) {
-			pitchAnalysisBufferQueue.push(&pitchAnalysisBuffer);
+		for (AudioBuffer& audioBuffer : audioBuffersArray) {
+			audioBuffer.resize(OUTPUT_SIGNAL_SIZE);
+			audioBufferIterPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
 		}
+
+		filterCoeff.resize(OUTPUT_SIGNAL_SIZE);
+		outputSignal.resize(OUTPUT_SIGNAL_SIZE);
+		filterFreqResponse.resize(FFT_RESULT_SIZE);
+		fftResult.resize(FFT_RESULT_SIZE);
 	}
 
 	PitchAnalyzer::~PitchAnalyzer()
 	{
+		if (fftPlan) {
+			fftwf_destroy_plan(fftPlan);
+		}
+		fftwf_cleanup();
 	}
 
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
+	void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
+	{
+		this->soundAnalyzedCallback = soundAnalyzedCallback;
+	}
+
+	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run() noexcept
 	{
 		// Initialize AudioInput object
 		co_await audioInput.Initialize();
-		// Attach callback
-		this->soundAnalyzedCallback = soundAnalyzedCallback;
+
+		// Create plan for filter FFT
+		fftPlan = fftwf_plan_dft_r2c_1d(
+			FFT_RESULT_SIZE,
+			filterCoeff.data(),
+			reinterpret_cast<fftwf_complex*>(filterFreqResponse.data()),
+			FFTW_PATIENT);
+
+		// Generate filter coefficients
+		DSP::GenerateBandPassFIR(
+			MIN_FREQUENCY,
+			MAX_FREQUENCY,
+			audioInput.GetSampleRate(),
+			filterCoeff.begin(),
+			std::next(filterCoeff.begin(), FILTER_SIZE),
+			DSP::WindowGenerator::WindowType::Hann);
+
+		fftwf_execute(fftPlan);
+
 		// Get first buffer from queue and attach it to AudioInput class object
-		audioInput.AttachBuffer(pitchAnalysisBufferQueue.front());
+		audioInput.AttachBuffer(GetNextAudioBufferIters());
 		// Pass function as callback
 		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, this, std::placeholders::_1, std::placeholders::_2));
-		// Generate window coefficients
-		DSP::WindowGenerator::Generate(DSP::WindowGenerator::WindowType::Hann, windowCoefficients.begin(), windowCoefficients.end());
+
 		// Start recording input
 		audioInput.Start();
 	}

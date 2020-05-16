@@ -58,9 +58,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="PropertySheet.props" />
-    <None Include="libfftw3f-3.dll" />
     <None Include="Tuner_TemporaryKey.pfx" />
     <None Include="packages.config" />
+    <None Include="libfftw3f-3.dll" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />

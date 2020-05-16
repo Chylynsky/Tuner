@@ -1,5 +1,4 @@
 #pragma once
-#include "PitchAnalysisBuffer.h"
 
 namespace winrt::Tuner::implementation
 {
@@ -11,8 +10,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		using sample_t = float;
-		using BufferFilledCallback = std::function<void(AudioInput& sender, PitchAnalysisBuffer* args)>;
+		using BufferFilledCallback = std::function<void(AudioInput& sender, std::pair<float*, float*>& args)>;
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;
@@ -22,13 +20,11 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 
-		PitchAnalysisBuffer* pitchAnalysisBuffer;
+		std::pair<float*, float*> audioBufferIters;
 		// Helper pointers
 		float* first;
 		float* last;
 		float* current;
-		
-		std::mutex audioInputMutex;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 
@@ -44,7 +40,7 @@ namespace winrt::Tuner::implementation
 		// Stop recording audio data
 		void Stop() const noexcept;
 
-		void AttachBuffer(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept;
+		void AttachBuffer(std::pair<float*, float*> audioBufferIters) noexcept;
 
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 
@@ -66,11 +62,11 @@ namespace winrt::Tuner::implementation
 		audioGraph.Stop();
 	}
 
-	inline void AudioInput::AttachBuffer(PitchAnalysisBuffer* pitchAnalysisBuffer) noexcept
+	inline void AudioInput::AttachBuffer(std::pair<float*, float*> audioBufferIters) noexcept
 	{
-		this->pitchAnalysisBuffer = pitchAnalysisBuffer;
-		first = current = pitchAnalysisBuffer->audioBuffer.data();
-		last = first + pitchAnalysisBuffer->audioBuffer.size();
+		this->audioBufferIters = audioBufferIters;
+		first = current = audioBufferIters.first;
+		last = audioBufferIters.second;
 	}
 
 	inline void AudioInput::BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept

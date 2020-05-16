@@ -39,4 +39,5 @@
 #include <queue>
 #include <map>
 #include <future>
+#include <type_traits>
 #include "fftw3.h"

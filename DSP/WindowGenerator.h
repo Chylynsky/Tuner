@@ -37,10 +37,6 @@ namespace DSP
 		template<typename iter>
 		static void GenerateBlackmanHarrisWindow(iter first, iter last) noexcept;
 
-		// Helper method for multiplying window coefficients with samples
-		template<typename iter1, typename iter2>
-		static void _ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst) noexcept;
-
 	public:
 
 		enum class WindowType { 
@@ -57,11 +53,6 @@ namespace DSP
 		// Generate the choosen window
 		template<typename iter>
 		static void Generate(WindowType type, iter first, iter last) noexcept;
-
-		// Apply window to a given signal in a given number of threads.
-		// Window length must match with the number of samples.
-		template<typename iter1, typename iter2>
-		static void ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst, uint32_t threadCount = 1) noexcept;
 	};
 
 	template<typename iter>
@@ -141,8 +132,8 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		constexpr value_t a0 = static_cast<value_t>(25) / static_cast<value_t>(46);
-		constexpr value_t a1 = 1 - a0;
+		constexpr value_t a0{ static_cast<value_t>(25) / static_cast<value_t>(46) };
+		constexpr value_t a1{ 1 - a0 };
 
 		const diff_t N = std::distance<iter>(first, last);
 
@@ -161,9 +152,9 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		constexpr value_t a0 = static_cast<value_t>(7938) / static_cast<value_t>(18608);
-		constexpr value_t a1 = static_cast<value_t>(9240) / static_cast<value_t>(18608);
-		constexpr value_t a2 = static_cast<value_t>(1430) / static_cast<value_t>(18608);
+		constexpr value_t a0{ static_cast<value_t>(7938) / static_cast<value_t>(18608) };
+		constexpr value_t a1{ static_cast<value_t>(9240) / static_cast<value_t>(18608) };
+		constexpr value_t a2{ static_cast<value_t>(1430) / static_cast<value_t>(18608) };
 
 		const diff_t N = std::distance<iter>(first, last);
 
@@ -182,10 +173,10 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		constexpr value_t a0 = 0.3635819;
-		constexpr value_t a1 = 0.4891775;
-		constexpr value_t a2 = 0.1365995;
-		constexpr value_t a3 = 0.0106411;
+		constexpr value_t a0{ static_cast<value_t>(0.3635819) };
+		constexpr value_t a1{ static_cast<value_t>(0.4891775) };
+		constexpr value_t a2{ static_cast<value_t>(0.1365995) };
+		constexpr value_t a3{ static_cast<value_t>(0.0106411) };
 
 		const diff_t N = std::distance<iter>(first, last);
 
@@ -204,10 +195,10 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		constexpr value_t a0 = 0.35875;
-		constexpr value_t a1 = 0.48829;
-		constexpr value_t a2 = 0.14128;
-		constexpr value_t a3 = 0.01168;
+		constexpr value_t a0{ static_cast<value_t>(0.35875) };
+		constexpr value_t a1{ static_cast<value_t>(0.48829) };
+		constexpr value_t a2{ static_cast<value_t>(0.14128) };
+		constexpr value_t a3{ static_cast<value_t>(0.01168) };
 
 		const diff_t N = std::distance<iter>(first, last);
 
@@ -216,16 +207,6 @@ namespace DSP
 			*first = a0 - a1 * std::cos(static_cast<value_t>(2) * pi<value_t> * n / static_cast<value_t>(N)) + a2 * std::cos(static_cast<value_t>(4) * pi<value_t> * n / static_cast<value_t>(N)) - a3 * std::cos(static_cast<value_t>(6) * pi<value_t> * n / static_cast<value_t>(N));
 			std::advance(first, 1);
 			n++;
-		}
-	}
-
-	template<typename iter1, typename iter2>
-	inline void WindowGenerator::_ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst) noexcept
-	{
-		while (samplesFirst != samplesLast) {
-			*samplesFirst *= *windowFirst;
-			std::advance(samplesFirst, 1);
-			std::advance(windowFirst, 1);
 		}
 	}
 
@@ -242,41 +223,6 @@ namespace DSP
 		case WindowType::BlackmanNuttall:	WindowGenerator::GenerateBlackmanNuttallWindow(first, last);	break;
 		case WindowType::BlackmanHarris:	WindowGenerator::GenerateBlackmanHarrisWindow(first, last);		break;
 		default: break;
-		}
-	}
-
-	template<typename iter1, typename iter2>
-	inline void WindowGenerator::ApplyWindow(iter1 samplesFirst, iter1 samplesLast, iter2 windowFirst, uint32_t threadCount) noexcept
-	{
-		using diff_t = typename std::iterator_traits<iter1>::difference_type;
-		// Number of samples
-		const diff_t N = std::distance<iter1>(samplesFirst, samplesLast);
-		const diff_t step = N / static_cast<diff_t>(threadCount);
-
-		if (threadCount == 1) {
-			WindowGenerator::_ApplyWindow(samplesFirst, samplesLast, windowFirst);
-			return;
-		}
-
-		// Number of samples must be higher and dividable by the number of threads.
-		assert(N % threadCount == 0 && N > threadCount);
-
-		std::vector<std::thread> threadPool(threadCount);
-		diff_t i = 0;
-		for (std::thread& thread : threadPool) {
-			thread = std::thread([=]() {
-				WindowGenerator::_ApplyWindow(
-					std::next(samplesFirst, i * step), 
-					std::next(samplesFirst, (i + 1) * step), 
-					std::next(windowFirst, i * step));
-				});
-			i++;
-		}
-
-		for (std::thread& thread : threadPool) {
-			if (thread.joinable()) {
-				thread.join();
-			}
 		}
 	}
 }
