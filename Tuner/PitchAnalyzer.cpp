@@ -80,7 +80,7 @@ namespace winrt::Tuner::implementation
 		float currentFrequency{ BASE_NOTE_FREQUENCY };
 		int currentOctave{ 4 };
 		int halfSteps{ 0 };
-		std::map<float, std::string> result;
+		NoteFrequenciesMap result;
 
 		// Fill a map for notes below and equal AA
 		while (currentFrequency >= MIN_FREQUENCY) {
@@ -179,9 +179,13 @@ namespace winrt::Tuner::implementation
 			audioInput.GetSampleRate(),
 			filterCoeff.begin(),
 			std::next(filterCoeff.begin(), FILTER_SIZE),
-			DSP::WindowGenerator::WindowType::Hann);
+			DSP::WindowGenerator::WindowType::BlackmanNuttall);
 
 		fftwf_execute(fftPlan);
+
+#ifdef LOG_ANALYSIS
+		CreateFilterParametersLog();
+#endif
 
 		// Get first buffer from queue and attach it to AudioInput class object
 		audioInput.AttachBuffer(GetNextAudioBufferIters());
@@ -191,4 +195,40 @@ namespace winrt::Tuner::implementation
 		// Start recording input
 		audioInput.Start();
 	}
+
+#ifdef LOG_ANALYSIS
+	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::CreateFilterParametersLog()
+	{
+		std::stringstream sstr;
+		sstr << "fs = " << audioInput.GetSampleRate() << ";" << std::endl;
+		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
+		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
+		sstr << "t = 0 : 1 / fs : (filter_size - 1) / fs;" << std::endl;
+		sstr << "n = 0 : fs / fft_size : fs - 1;" << std::endl;
+		sstr << "filter = " << "[ ";
+		for (auto& val : filterCoeff) {
+			sstr << val << " ";
+		}
+		sstr << " ];" << std::endl;
+
+		sstr << "filter_freq_response = " << "[ ";
+		for (auto& val : filterFreqResponse) {
+			sstr << 20.0f * std::log10(std::pow(std::abs(val), 2)) << " ";
+		}
+		sstr << " ];" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "plot(t, filter(1 : filter_size))" << std::endl;
+		sstr << "xlabel('Time [s]')" << std::endl;
+		sstr << "title('Impulse response')" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "semilogx(n, filter_freq_response)" << std::endl;
+		sstr << "xlabel('Frequency [Hz]')" << std::endl;
+		sstr << "ylabel('Magnitude [dB]')" << std::endl;
+		sstr << "title('Transfer function')" << std::endl;
+
+		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
+		Windows::Storage::StorageFile file{ co_await storageFolder.CreateFileAsync(L"filter_log.m", Windows::Storage::CreationCollisionOption::ReplaceExisting) };
+		co_await Windows::Storage::FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
+	}
+#endif
 }

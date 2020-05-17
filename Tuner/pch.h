@@ -16,6 +16,7 @@
 #include <winrt/Windows.UI.Xaml.Shapes.h>
 #include <winrt/Windows.UI.Xaml.Media.h>
 
+#include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Media.h>
 #include <winrt/Windows.Media.Audio.h>
 #include <winrt/Windows.Media.Capture.h>
@@ -40,4 +41,5 @@
 #include <map>
 #include <future>
 #include <type_traits>
+#include <sstream>
 #include "fftw3.h"

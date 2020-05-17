@@ -1,7 +1,11 @@
 #pragma once
 #include "AudioInput.h"
-#include "PitchAnalysisBuffer.h"
 #include "FilterGenerator.h"
+
+#define LOG_ANALYSIS
+#ifdef NDEBUG
+#undef LOG_ANALYSIS
+#endif
 
 #ifdef max
 #undef max
@@ -9,8 +13,6 @@
 #ifdef min
 #undef min
 #endif
-
-#define LOG_ANALYSIS
 
 namespace winrt::Tuner::implementation
 {
@@ -22,7 +24,7 @@ namespace winrt::Tuner::implementation
 		using AudioBuffer = std::vector<sample_t>;
 		using AudioBufferIteratorPair = std::pair<sample_t*, sample_t*>;
 		using FFTResultBuffer = std::vector<complex_t>;
-		using NoteFrequenciesMap = const std::map<sample_t, std::string>;
+		using NoteFrequenciesMap = std::map<sample_t, std::string>;
 		using AudioBufferArray = std::array<AudioBuffer, 4>;
 		using AudioBufferQueue = std::queue<AudioBufferIteratorPair>;
 		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float innaccuracy)>;
@@ -39,8 +41,8 @@ namespace winrt::Tuner::implementation
 		static constexpr uint32_t FFT_RESULT_SIZE{ OUTPUT_SIGNAL_SIZE / 2U + 1U };
 
 		// Requested frequency range
-		static constexpr float MIN_FREQUENCY{ 20.0f };
-		static constexpr float MAX_FREQUENCY{ 2000.0f };
+		static constexpr float MIN_FREQUENCY{ 80.0f };
+		static constexpr float MAX_FREQUENCY{ 1200.0f };
 		// A4 base note frequency
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
@@ -63,7 +65,7 @@ namespace winrt::Tuner::implementation
 		FFTResultBuffer fftResult;
 
 		// Map where key - frequency, value - note
-		NoteFrequenciesMap noteFrequencies{ InitializeNoteFrequenciesMap() };
+		const NoteFrequenciesMap noteFrequencies{ InitializeNoteFrequenciesMap() };
 
 		// FIR filter parameters
 		AudioBuffer filterCoeff;
@@ -106,6 +108,11 @@ namespace winrt::Tuner::implementation
 		void AudioInput_BufferFilled(AudioInput& sender, AudioBufferIteratorPair args);
 
 		AudioBufferIteratorPair GetNextAudioBufferIters();
+
+#ifdef LOG_ANALYSIS
+		// Create matlab .m file with filter parameters
+		winrt::Windows::Foundation::IAsyncAction CreateFilterParametersLog();
+#endif;
 	};
 
 
