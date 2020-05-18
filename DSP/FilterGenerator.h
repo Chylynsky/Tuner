@@ -11,9 +11,9 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		// Pre-calculate formula for normalized angular frequency divided by pi
-		const value_t a0 = static_cast<value_t>(2) * static_cast<value_t>(fc1) / static_cast<value_t>(samplingFreq);
-		const value_t a1 = static_cast<value_t>(2) * static_cast<value_t>(fc2) / static_cast<value_t>(samplingFreq);
+		// Pre-calculate formula for normalized angular frequency
+		const value_t a0 = static_cast<value_t>(2) * pi<value_t> * static_cast<value_t>(fc1) / static_cast<value_t>(samplingFreq);
+		const value_t a1 = static_cast<value_t>(2) * pi<value_t> * static_cast<value_t>(fc2) / static_cast<value_t>(samplingFreq);
 
 		diff_t N = std::distance(first, last);
 		diff_t NHalf = N / static_cast<diff_t>(2);
@@ -23,7 +23,7 @@ namespace DSP
 
 		while (first != last) {
 			value_t nDelayed = n - NHalf;
-			*first *= a1 * sinc(nDelayed * a1) - a0 * sinc(nDelayed * a0);
+			*first *= a1 / pi<value_t> * sinc(nDelayed * a1) - a0 / pi<value_t> * sinc(nDelayed * a0);
 			std::advance(first, 1);
 			n++;
 		}
@@ -36,8 +36,8 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		// Pre-calculate formula for normalized angular frequency divided by pi
-		const value_t a0 = static_cast<value_t>(2) * static_cast<value_t>(fc) / static_cast<value_t>(samplingFreq);
+		// Pre-calculate formula for normalized angular frequency
+		const value_t a0 = static_cast<value_t>(2) * pi<value_t> * static_cast<value_t>(fc) / static_cast<value_t>(samplingFreq);
 
 		diff_t N = std::distance(first, last);
 		diff_t NHalf = N / static_cast<diff_t>(2);
@@ -46,7 +46,7 @@ namespace DSP
 		WindowGenerator::Generate(windowType, first, last);
 
 		while (first != last) {
-			*first *= a0 * sinc((n - NHalf) * a0);
+			*first *= a0 / pi<value_t> * sinc((n - NHalf) * a0);
 			std::advance(first, 1);
 			n++;
 		}
@@ -59,8 +59,8 @@ namespace DSP
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
-		// Pre-calculate formula for normalized angular frequency divided by pi
-		const value_t a0 = static_cast<value_t>(2) * static_cast<value_t>(fc) / static_cast<value_t>(samplingFreq);
+		// Pre-calculate formula for normalized angular frequency
+		const value_t a0 = static_cast<value_t>(2) * pi<value_t> * static_cast<value_t>(fc) / static_cast<value_t>(samplingFreq);
 
 		diff_t N = std::distance(first, last);
 		diff_t NHalf = N / static_cast<diff_t>(2);
@@ -70,7 +70,7 @@ namespace DSP
 
 		while (first != last) {
 			value_t nDelayed = n - NHalf;
-			*first *= sinc(nDelayed) - a0 * sinc(nDelayed * a0);
+			*first *= sinc(nDelayed) - a0 / pi<value_t> * sinc(nDelayed * a0);
 			std::advance(first, 1);
 			n++;
 		}

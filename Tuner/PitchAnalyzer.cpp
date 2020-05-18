@@ -41,6 +41,10 @@ namespace winrt::Tuner::implementation
 		// Apply FIR filter to the input signal
 		std::transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst,  std::multiplies<complex_t>());
 
+#ifdef LOG_ANALYSIS
+
+#endif
+
 		/*
 		// Prepare the FFT result for cepstrum calculation
 		for (size_t i = 0; i < FFT_RESULT_SIZE; i++) {
@@ -179,7 +183,7 @@ namespace winrt::Tuner::implementation
 			audioInput.GetSampleRate(),
 			filterCoeff.begin(),
 			std::next(filterCoeff.begin(), FILTER_SIZE),
-			DSP::WindowGenerator::WindowType::BlackmanNuttall);
+			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
 		fftwf_execute(fftPlan);
 
@@ -191,7 +195,6 @@ namespace winrt::Tuner::implementation
 		audioInput.AttachBuffer(GetNextAudioBufferIters());
 		// Pass function as callback
 		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, this, std::placeholders::_1, std::placeholders::_2));
-
 		// Start recording input
 		audioInput.Start();
 	}
@@ -203,8 +206,10 @@ namespace winrt::Tuner::implementation
 		sstr << "fs = " << audioInput.GetSampleRate() << ";" << std::endl;
 		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
 		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
-		sstr << "t = 0 : 1 / fs : (filter_size - 1) / fs;" << std::endl;
-		sstr << "n = 0 : fs / fft_size : fs - 1;" << std::endl;
+		sstr << "time_step = 1 / fs;" << std::endl;
+		sstr << "freq_step = fs / fft_size;" << std::endl;
+		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << std::endl;
+		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
 		sstr << "filter = " << "[ ";
 		for (auto& val : filterCoeff) {
 			sstr << val << " ";
@@ -213,7 +218,7 @@ namespace winrt::Tuner::implementation
 
 		sstr << "filter_freq_response = " << "[ ";
 		for (auto& val : filterFreqResponse) {
-			sstr << 20.0f * std::log10(std::pow(std::abs(val), 2)) << " ";
+			sstr << 20.0f * std::log10(std::abs(val)) << " ";
 		}
 		sstr << " ];" << std::endl;
 		sstr << "nexttile" << std::endl;
@@ -221,7 +226,7 @@ namespace winrt::Tuner::implementation
 		sstr << "xlabel('Time [s]')" << std::endl;
 		sstr << "title('Impulse response')" << std::endl;
 		sstr << "nexttile" << std::endl;
-		sstr << "semilogx(n, filter_freq_response)" << std::endl;
+		sstr << "plot(n, filter_freq_response)" << std::endl;
 		sstr << "xlabel('Frequency [Hz]')" << std::endl;
 		sstr << "ylabel('Magnitude [dB]')" << std::endl;
 		sstr << "title('Transfer function')" << std::endl;

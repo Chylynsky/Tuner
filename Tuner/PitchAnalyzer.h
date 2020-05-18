@@ -3,9 +3,6 @@
 #include "FilterGenerator.h"
 
 #define LOG_ANALYSIS
-#ifdef NDEBUG
-#undef LOG_ANALYSIS
-#endif
 
 #ifdef max
 #undef max
@@ -110,7 +107,7 @@ namespace winrt::Tuner::implementation
 		AudioBufferIteratorPair GetNextAudioBufferIters();
 
 #ifdef LOG_ANALYSIS
-		// Create matlab .m file with filter parameters
+		// Create matlab .m file with filter parameters plots
 		winrt::Windows::Foundation::IAsyncAction CreateFilterParametersLog();
 #endif;
 	};

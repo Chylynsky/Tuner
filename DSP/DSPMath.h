@@ -9,7 +9,7 @@ namespace DSP
 	template<typename T1>
 	inline T1 sinc(T1 val) noexcept
 	{
-		return (val == static_cast<T1>(0)) ? 1 : std::sin(val) / val;
+		return (val == static_cast<T1>(0)) ? static_cast<T1>(1) : std::sin(val) / val;
 	}
 
 	// Convert frequency to normalized omega (radians/sample)
