@@ -35,6 +35,7 @@
 #include <cmath>
 #include <limits>
 #include <functional>
+#include <cstdlib>
 #include <mutex>
 #include <atomic>
 #include <queue>

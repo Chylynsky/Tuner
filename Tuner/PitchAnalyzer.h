@@ -3,7 +3,9 @@
 #include "FilterGenerator.h"
 
 #define LOG_ANALYSIS
-
+#if defined NDEBUG && defined LOG_ANALYSIS
+#undef LOG_ANALYSIS
+#endif
 #ifdef max
 #undef max
 #endif
@@ -49,7 +51,7 @@ namespace winrt::Tuner::implementation
 		// Attach function that gets called when sound analysis is completed
 		void SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept;
 
-		winrt::Windows::Foundation::IAsyncAction Run() noexcept;
+		winrt::Windows::Foundation::IAsyncAction Run();
 
 	private:
 
@@ -106,9 +108,17 @@ namespace winrt::Tuner::implementation
 
 		AudioBufferIteratorPair GetNextAudioBufferIters();
 
+		// Save fftwf_plan to LocalState folder via FFTW Wisdom
+		winrt::Windows::Foundation::IAsyncAction SaveFFTPlan();
+
+		// Load fftwf_plan
+		winrt::Windows::Foundation::IAsyncOperation<bool> LoadFFTPlan();
+
 #ifdef LOG_ANALYSIS
 		// Create matlab .m file with filter parameters plots, saved in app's storage folder
-		winrt::Windows::Foundation::IAsyncAction CreateFilterParametersLog();
+		winrt::Windows::Foundation::IAsyncAction ExportFilterMatlab();
+
+		winrt::Windows::Foundation::IAsyncAction ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst);
 #endif;
 	};
 

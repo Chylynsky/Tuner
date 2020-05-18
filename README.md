@@ -1,11 +1,13 @@
 # Tuner-UWP
-Guitar Tuner for Universal Windows Platform, created using C++/WinRT.
 
-In short about files in the project:
+Guitar tuner for Universal Windows Platform, created using C++/WinRT and FFTW3 library.
 
-1. MainPage.h, MainPage.cpp specify the bahaviour of the application from the user's point of view (visual representation of th results), 
-  as well as bind all the components together.
-2. PitchAnalyer.h, PitchAnalyzer.cpp use FFTW library to perform the sound harmonic analysis and calculate the note with the 
-  highest amplitude.
-3. AudioInput.h, AudioInput.cpp connect to audio input device choosen currently in the systems settings and store the recorded audio 
-  samples in a buffer.
+Solution consists of two main parts:
+- DSP project with utilities allowing window and FIR filter generation
+- Tuner project with GUI tuner application
+
+## Notes
+
+- When LOG_ANALYSIS macro is defined, filter_log.m and analysis_log.m Matlab files are generated
+	to application's LocalState directory allowing further analysis.
+- Tuner project's compilation is dependant on DSP project.

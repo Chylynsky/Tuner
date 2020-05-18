@@ -15,7 +15,7 @@ namespace winrt::Tuner::implementation
     {
         InitializeComponent();
 		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
-		concurrency::create_task(std::bind(&PitchAnalyzer::Run, &pitchAnalyzer));
+		pitchAnalyzer.Run();
     }
 
     int32_t MainPage::MyProperty()
