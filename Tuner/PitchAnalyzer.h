@@ -24,7 +24,7 @@ namespace winrt::Tuner::implementation
 		using NoteFrequenciesMap = std::map<sample_t, std::string>;
 		using AudioBufferArray = std::array<AudioBuffer, 4>;
 		using AudioBufferQueue = std::queue<AudioBufferIteratorPair>;
-		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float innaccuracy)>;
+		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
 
 		struct PitchAnalysisResult
 		{
@@ -98,7 +98,7 @@ namespace winrt::Tuner::implementation
 		// for each analysis performed.
 		void Analyze(AudioBufferIteratorPair audioBufferIters) noexcept;
 
-		// Function used for filling the noteFrequencies std::map.
+		// Function used for filling the noteFrequencies std::map
 		NoteFrequenciesMap InitializeNoteFrequenciesMap() noexcept;
 
 		// AudioInput BufferFilled event callback
@@ -107,7 +107,7 @@ namespace winrt::Tuner::implementation
 		AudioBufferIteratorPair GetNextAudioBufferIters();
 
 #ifdef LOG_ANALYSIS
-		// Create matlab .m file with filter parameters plots
+		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction CreateFilterParametersLog();
 #endif;
 	};

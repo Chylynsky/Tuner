@@ -65,7 +65,7 @@ namespace winrt::Tuner::implementation
 		// Check if frequency of the peak is in the requested range
 		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
 			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
-			soundAnalyzedCallback(measurement.note, measurement.cents, firstHarmonic);
+			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));

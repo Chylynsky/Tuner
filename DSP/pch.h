@@ -8,9 +8,4 @@
 
 #include <windows.h>
 #include <iterator>
-#include <vector>
-#include <array>
-#include <thread>
 #include <cmath>
-#include <cassert>
-#include <functional>

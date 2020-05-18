@@ -3,6 +3,8 @@
 #include "App.h"
 #include "MainPage.h"
 
+using namespace std;
+using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Activation;

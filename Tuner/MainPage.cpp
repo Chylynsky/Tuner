@@ -7,6 +7,7 @@ using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
+using namespace Windows::System;
 
 namespace winrt::Tuner::implementation
 {
@@ -14,6 +15,7 @@ namespace winrt::Tuner::implementation
     {
         InitializeComponent();
 		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
+		concurrency::create_task(std::bind(&PitchAnalyzer::Run, &pitchAnalyzer));
     }
 
     int32_t MainPage::MyProperty()
@@ -26,7 +28,7 @@ namespace winrt::Tuner::implementation
         throw hresult_not_implemented();
     }
 
-	IAsyncAction MainPage::SoundAnalyzed_Callback(const string& note, float cents, float frequency)
+	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
 		co_await winrt::resume_foreground(Note_TextBlock().Dispatcher());
 
@@ -84,11 +86,5 @@ namespace winrt::Tuner::implementation
 			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
 		}
-	}
-
-	IAsyncAction MainPage::Page_Loaded(IInspectable const& sender, RoutedEventArgs const& e)
-	{
-		// Attach SoundAnalyzed_Callback, called when each analysis is finished
-		co_await pitchAnalyzer.Run();
 	}
 }

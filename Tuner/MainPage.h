@@ -13,8 +13,8 @@ namespace winrt::Tuner::implementation
 
         int32_t MyProperty();
         void MyProperty(int32_t value);
-        winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float cents, float frequency);
-        winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+
+        winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float frequency, float cents);
     };
 }
 
