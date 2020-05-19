@@ -3,6 +3,43 @@
 
 namespace winrt::Tuner::implementation
 {
+	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
+	{
+		/*
+			All vectors holding real values are resized to OUTPUT_SIGNAL_SIZE,
+			which results in zero padding.
+		*/
+
+		// Add buffers to queue
+		for (AudioBuffer& audioBuffer : audioBuffersArray) {
+			audioBuffer.resize(OUTPUT_SIGNAL_SIZE);
+			audioBufferIterPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
+		}
+
+		filterCoeff.resize(OUTPUT_SIGNAL_SIZE);
+		outputSignal.resize(OUTPUT_SIGNAL_SIZE);
+		filterFreqResponse.resize(FFT_RESULT_SIZE);
+		fftResult.resize(FFT_RESULT_SIZE);
+	}
+
+	PitchAnalyzer::~PitchAnalyzer()
+	{
+		if (fftPlan) {
+			fftwf_destroy_plan(fftPlan);
+		}
+		fftwf_cleanup();
+	}
+
+	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalyzer::AudioBufferIteratorPair args)
+	{
+		WINRT_ASSERT(audioBufferIterPairQueue.size() > 0);
+
+		// Attach new buffer
+		sender.AttachBuffer(GetNextAudioBufferIters());
+		// Run harmonic analysis
+		std::async(std::launch::async, std::bind(&PitchAnalyzer::Analyze, this, args));
+	}
+
 	PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
 	{
 		// Get the nearest note above or equal
@@ -44,7 +81,7 @@ namespace winrt::Tuner::implementation
 		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
 #endif
 
-		float firstHarmonic = GetFirstHarmonic(fftResultFirst, fftResultLast, audioInput.GetSampleRate());
+		float firstHarmonic = GetFirstHarmonic(fftResultFirst, fftResultLast, samplingFrequency);
 
 		// Check if frequency of the peak is in the requested range
 		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
@@ -106,43 +143,6 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
-	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalyzer::AudioBufferIteratorPair args)
-	{
-		WINRT_ASSERT(audioBufferIterPairQueue.size() > 0);
-
-		// Attach new buffer
-		sender.AttachBuffer(GetNextAudioBufferIters());
-		// Run harmonic analysis
-		std::async(std::launch::async, std::bind(&PitchAnalyzer::Analyze, this, args));
-	}
-
-	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
-	{
-		/*
-			All vectors holding real values are resized to OUTPUT_SIGNAL_SIZE,
-			which results in zero padding.
-		*/
-
-		// Add buffers to queue
-		for (AudioBuffer& audioBuffer : audioBuffersArray) {
-			audioBuffer.resize(OUTPUT_SIGNAL_SIZE);
-			audioBufferIterPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
-		}
-
-		filterCoeff.resize(OUTPUT_SIGNAL_SIZE);
-		outputSignal.resize(OUTPUT_SIGNAL_SIZE);
-		filterFreqResponse.resize(FFT_RESULT_SIZE);
-		fftResult.resize(FFT_RESULT_SIZE);
-	}
-
-	PitchAnalyzer::~PitchAnalyzer()
-	{
-		if (fftPlan) {
-			fftwf_destroy_plan(fftPlan);
-		}
-		fftwf_cleanup();
-	}
-
 	void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
 	{
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
@@ -150,9 +150,6 @@ namespace winrt::Tuner::implementation
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
 	{
-		// Initialize AudioInput object
-		co_await audioInput.Initialize();
-
 		// Check if FFT plan was created earlier
 		bool loadFFTResult = co_await LoadFFTPlan();
 		if (!loadFFTResult) {
@@ -176,7 +173,7 @@ namespace winrt::Tuner::implementation
 		DSP::GenerateBandPassFIR(
 			MIN_FREQUENCY,
 			MAX_FREQUENCY,
-			audioInput.GetSampleRate(),
+			samplingFrequency,
 			filterCoeff.begin(),
 			std::next(filterCoeff.begin(), FILTER_SIZE),
 			DSP::WindowGenerator::WindowType::BlackmanHarris);
@@ -186,13 +183,6 @@ namespace winrt::Tuner::implementation
 #ifdef LOG_ANALYSIS
 		ExportFilterMatlab();
 #endif
-
-		// Get first buffer from queue and attach it to AudioInput class object
-		audioInput.AttachBuffer(GetNextAudioBufferIters());
-		// Pass function as callback
-		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, this, std::placeholders::_1, std::placeholders::_2));
-		// Start recording input
-		audioInput.Start();
 	}
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan()
@@ -226,7 +216,7 @@ namespace winrt::Tuner::implementation
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::ExportFilterMatlab()
 	{
 		std::stringstream sstr;
-		sstr << "fs = " << audioInput.GetSampleRate() << ";" << std::endl;
+		sstr << "fs = " << samplingFrequency << ";" << std::endl;
 		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
 		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
 		sstr << "time_step = 1 / fs;" << std::endl;
@@ -262,7 +252,7 @@ namespace winrt::Tuner::implementation
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst)
 	{
 		std::stringstream sstr;
-		sstr << "fs = " << audioInput.GetSampleRate() << ";" << std::endl;
+		sstr << "fs = " << samplingFrequency << ";" << std::endl;
 		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << std::endl;
 		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
 		sstr << "time_step = 1 / fs;" << std::endl;

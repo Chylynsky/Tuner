@@ -47,14 +47,27 @@ namespace winrt::Tuner::implementation
 		// A4 base note frequency
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
+		float samplingFrequency{ 44100.0f };
+
 		PitchAnalyzer();
 		~PitchAnalyzer();
+
+		// Set sampling frequency of the audio input device. This step
+		// is neccessary to make sure the calculations performed are accurate.
+		// Default value is 44.1kHz.
+		void SetSamplingFrequency(float samplingFrequency) noexcept;
 
 		// Attach function that gets called when sound analysis is completed
 		void SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept;
 
 		// Initialize audio, deduce the best performant FFT algorithm
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync() noexcept;
+
+		// Returns std::pair of pointers to available audio buffer <first; last)
+		AudioBufferIteratorPair GetNextAudioBufferIters();
+
+		// AudioInput BufferFilled event callback
+		void AudioInput_BufferFilled(AudioInput& sender, AudioBufferIteratorPair args);
 
 	private:
 
@@ -75,9 +88,6 @@ namespace winrt::Tuner::implementation
 		
 		// Convolution result
 		AudioBuffer outputSignal;
-
-		// Audio recording device
-		AudioInput audioInput;
 		
 		// Array of buffers that hold recorded samples
 		AudioBufferArray audioBuffersArray;
@@ -99,12 +109,6 @@ namespace winrt::Tuner::implementation
 		// Function used for filling the noteFrequencies std::map
 		NoteFrequenciesMap InitializeNoteFrequenciesMap() noexcept;
 
-		// AudioInput BufferFilled event callback
-		void AudioInput_BufferFilled(AudioInput& sender, AudioBufferIteratorPair args);
-
-		// Returns std::pair of pointers to available audio buffer <first; last)
-		AudioBufferIteratorPair GetNextAudioBufferIters();
-
 		// Save fftwf_plan to LocalState folder via FFTW Wisdom
 		winrt::Windows::Foundation::IAsyncAction SaveFFTPlan();
 
@@ -120,13 +124,17 @@ namespace winrt::Tuner::implementation
 #endif;
 	};
 
+	inline void PitchAnalyzer::SetSamplingFrequency(float samplingFrequency) noexcept
+	{
+		this->samplingFrequency = samplingFrequency;
+	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//
-	//										TEMPLATE DEFINITIONS
-	//
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters()
+	{
+		auto iters = audioBufferIterPairQueue.front();
+		audioBufferIterPairQueue.pop();
+		return iters;
+	}
 
 	template<typename iter>
 	float PitchAnalyzer::GetFirstHarmonic(iter first, iter last, uint32_t samplingFrequency) const noexcept
@@ -159,12 +167,5 @@ namespace winrt::Tuner::implementation
 		}
 
 		return highestAmplFreq.second;
-	}
-
-	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters()
-	{
-		auto iters = audioBufferIterPairQueue.front();
-		audioBufferIterPairQueue.pop();
-		return iters;
 	}
 }

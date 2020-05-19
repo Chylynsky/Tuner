@@ -2,6 +2,8 @@
 #include "MainPage.h"
 #include "MainPage.g.cpp"
 
+using namespace std;
+using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
@@ -12,8 +14,7 @@ namespace winrt::Tuner::implementation
 	MainPage::MainPage()
     {
         InitializeComponent();
-		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-		pitchAnalyzer.InitializeAsync();
+		InitializeFunctionality();
     }
 
     int32_t MainPage::MyProperty()
@@ -25,6 +26,20 @@ namespace winrt::Tuner::implementation
     {
         throw hresult_not_implemented();
     }
+
+	IAsyncAction MainPage::InitializeFunctionality()
+	{
+		co_await audioInput.Initialize();
+		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
+		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
+		co_await pitchAnalyzer.InitializeAsync();
+		// Get first buffer from queue and attach it to AudioInput class object
+		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
+		// Attach callback function
+		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, &pitchAnalyzer, _1, _2));
+		// Start recording audio
+		audioInput.Start();
+	}
 
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
