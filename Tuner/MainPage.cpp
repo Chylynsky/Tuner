@@ -2,8 +2,6 @@
 #include "MainPage.h"
 #include "MainPage.g.cpp"
 
-using namespace std;
-using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI::Xaml;
 using namespace Windows::Foundation;
@@ -14,8 +12,8 @@ namespace winrt::Tuner::implementation
 	MainPage::MainPage()
     {
         InitializeComponent();
-		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
-		pitchAnalyzer.Run();
+		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		pitchAnalyzer.InitializeAsync();
     }
 
     int32_t MainPage::MyProperty()

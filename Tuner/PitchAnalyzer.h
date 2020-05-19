@@ -2,7 +2,7 @@
 #include "AudioInput.h"
 #include "FilterGenerator.h"
 
-#define LOG_ANALYSIS
+//#define LOG_ANALYSIS
 #if defined NDEBUG && defined LOG_ANALYSIS
 #undef LOG_ANALYSIS
 #endif
@@ -18,16 +18,18 @@ namespace winrt::Tuner::implementation
 	class PitchAnalyzer
 	{
 	public:
-		using sample_t = float;
-		using complex_t = std::complex<sample_t>;
-		using AudioBuffer = std::vector<sample_t>;
-		using AudioBufferIteratorPair = std::pair<sample_t*, sample_t*>;
-		using FFTResultBuffer = std::vector<complex_t>;
-		using NoteFrequenciesMap = std::map<sample_t, std::string>;
-		using AudioBufferArray = std::array<AudioBuffer, 4>;
-		using AudioBufferQueue = std::queue<AudioBufferIteratorPair>;
-		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
+		// Type aliases
+		using sample_t					= float;
+		using complex_t					= std::complex<sample_t>;
+		using AudioBuffer				= std::vector<sample_t>;
+		using AudioBufferIteratorPair	= std::pair<sample_t*, sample_t*>;
+		using FFTResultBuffer			= std::vector<complex_t>;
+		using NoteFrequenciesMap		= std::map<sample_t, std::string>;
+		using AudioBufferArray			= std::array<AudioBuffer, 4>;
+		using AudioBufferQueue			= std::queue<AudioBufferIteratorPair>;
+		using SoundAnalyzedCallback		= std::function<void(const std::string& note, float frequency, float cents)>;
 
+		// Struct holding the result of each, returned from GetNote() function.
 		struct PitchAnalysisResult
 		{
 			const std::string& note;
@@ -45,13 +47,14 @@ namespace winrt::Tuner::implementation
 		// A4 base note frequency
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
-		explicit PitchAnalyzer();
+		PitchAnalyzer();
 		~PitchAnalyzer();
 
 		// Attach function that gets called when sound analysis is completed
 		void SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept;
 
-		winrt::Windows::Foundation::IAsyncAction Run();
+		// Initialize audio, deduce the best performant FFT algorithm
+		winrt::Windows::Foundation::IAsyncAction InitializeAsync() noexcept;
 
 	private:
 
@@ -81,19 +84,12 @@ namespace winrt::Tuner::implementation
 		// Queue of available buffers
 		AudioBufferQueue audioBufferIterPairQueue;
 
-		// Template function that takes an input container of std::complex<T>, being the result of FFT and 
-		// returns the frequency of the first harmonic.
+		// Get frequency of the highest peak.
+		// iter - iterator with value type std::complex<T>
 		template<typename iter>
 		float GetFirstHarmonic(iter first, iter last, uint32_t samplingFrequency) const noexcept;
 
-		// Returns an index of a sample with the highest peak
-		template<typename iter>
-		decltype(auto) GetPeakQuefrency(iter first, iter last, uint32_t samplingFrequency) const noexcept;
-
-		template<typename T1, typename T2>
-		float QuefrencyToFrequncy(T1 quefrency, T2 samplingFrequency) const noexcept;
-
-		// Function takes frequency and returns PitchAnalysisResult object
+		// Analyzes input frequency and returns a filled PitchAnalysisResult struct
 		PitchAnalysisResult GetNote(float frequency) const noexcept;
 
 		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
@@ -106,6 +102,7 @@ namespace winrt::Tuner::implementation
 		// AudioInput BufferFilled event callback
 		void AudioInput_BufferFilled(AudioInput& sender, AudioBufferIteratorPair args);
 
+		// Returns std::pair of pointers to available audio buffer <first; last)
 		AudioBufferIteratorPair GetNextAudioBufferIters();
 
 		// Save fftwf_plan to LocalState folder via FFTW Wisdom
@@ -118,6 +115,7 @@ namespace winrt::Tuner::implementation
 		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction ExportFilterMatlab();
 
+		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst);
 #endif;
 	};
@@ -161,44 +159,6 @@ namespace winrt::Tuner::implementation
 		}
 
 		return highestAmplFreq.second;
-	}
-
-	template<typename iter>
-	decltype(auto) PitchAnalyzer::GetPeakQuefrency(iter first, iter last, uint32_t samplingFrequency) const noexcept
-	{
-		using diff_t = typename std::iterator_traits<iter>::difference_type;
-
-		// Number of samples
-		const diff_t N = std::distance<iter>(first, last);
-		// Iterator to the upper quefrency bound
-		const iter maxQuefIter = std::next(first, static_cast<diff_t>(samplingFrequency / static_cast<diff_t>(MIN_FREQUENCY)));
-
-		WINRT_ASSERT(maxQuefIter < last);
-
-		// Index of the lower quefrency bound
-		diff_t n = static_cast<diff_t>(samplingFrequency) / static_cast<diff_t>(MAX_FREQUENCY);
-		// Advance to the lower quefrency bound
-		first += n;
-
-		std::pair<float, diff_t> highestAmplQuef{ 0.0, 0 };
-		std::pair<float, diff_t> currAmplQuef{ 0.0, 0 };
-
-		while (first != maxQuefIter) {
-			currAmplQuef = std::make_pair(std::abs(*first), samplingFrequency / n);
-			if (currAmplQuef.first > highestAmplQuef.first) {
-				highestAmplQuef = currAmplQuef;
-			}
-			first++;
-			n++;
-		}
-
-		return highestAmplQuef.second;;
-	}
-
-	template<typename T1, typename T2>
-	inline float PitchAnalyzer::QuefrencyToFrequncy(T1 quefrency, T2 samplingFrequency) const noexcept
-	{
-		return static_cast<float>(samplingFrequency) / static_cast<float>(quefrency);
 	}
 
 	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters()

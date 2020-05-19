@@ -8,6 +8,6 @@ Solution consists of two main parts:
 
 ## Notes
 
-- When LOG_ANALYSIS macro is defined, filter_log.m and analysis_log.m Matlab files are generated
+- When LOG_ANALYSIS macro is defined in PitchAnalyzer.h, filter_log.m and analysis_log.m Matlab files are generated
 	to application's LocalState directory allowing further analysis.
 - Tuner project's compilation is dependant on DSP project.

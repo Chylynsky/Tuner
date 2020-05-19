@@ -148,7 +148,7 @@ namespace winrt::Tuner::implementation
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
 	}
 
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::Run()
+	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
 	{
 		// Initialize AudioInput object
 		co_await audioInput.Initialize();
@@ -197,8 +197,9 @@ namespace winrt::Tuner::implementation
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan()
 	{
-		char* fftPlanBufferRaw = fftwf_export_wisdom_to_string();
+		char* fftPlanBufferRaw{ fftwf_export_wisdom_to_string() };
 		winrt::hstring fftPlanBuffer{ winrt::to_hstring(fftPlanBufferRaw) };
+		//std::free(fftPlanBufferRaw);
 
 		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
 		Windows::Storage::StorageFile file{ co_await storageFolder.CreateFileAsync(L"fft_plan.bin", Windows::Storage::CreationCollisionOption::ReplaceExisting) };
@@ -208,15 +209,17 @@ namespace winrt::Tuner::implementation
 	winrt::Windows::Foundation::IAsyncOperation<bool> PitchAnalyzer::LoadFFTPlan()
 	{
 		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
-		try {
-			Windows::Storage::StorageFile file = co_await storageFolder.GetFileAsync(L"fft_plan.bin");
-			std::string fftPlanBuffer = winrt::to_string(co_await Windows::Storage::FileIO::ReadTextAsync(file));
-			fftwf_import_wisdom_from_string(fftPlanBuffer.c_str());
-			co_return true;
-		}
-		catch (const winrt::hresult_error& e) {
+		Windows::Storage::IStorageItem storageItem{ co_await storageFolder.TryGetItemAsync(L"fft_plan.bin") };
+
+		if (!storageItem) {
 			co_return false;
 		}
+
+		Windows::Storage::StorageFile file = storageItem.as<Windows::Storage::StorageFile>();
+		std::string fftPlanBuffer{ winrt::to_string(co_await Windows::Storage::FileIO::ReadTextAsync(file)) };
+		fftwf_import_wisdom_from_string(fftPlanBuffer.c_str());
+
+		co_return true;
 	}
 
 #ifdef LOG_ANALYSIS
