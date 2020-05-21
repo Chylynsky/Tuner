@@ -1,6 +1,15 @@
 ﻿#include "pch.h"
 #include "PitchAnalyzer.h"
 
+using namespace DSP;
+using namespace std;
+using namespace std::this_thread;
+using namespace std::chrono;
+using namespace std::chrono_literals;
+using namespace winrt;
+using namespace Windows::Storage;
+using namespace Windows::Foundation;
+
 namespace winrt::Tuner::implementation
 {
 	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
@@ -30,14 +39,13 @@ namespace winrt::Tuner::implementation
 		fftwf_cleanup();
 	}
 
-	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput& sender, PitchAnalyzer::AudioBufferIteratorPair args)
+	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput* sender, const PitchAnalyzer::AudioBufferIteratorPair args) noexcept
 	{
-		WINRT_ASSERT(audioBufferIterPairQueue.size() > 0);
-
+		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
 		// Attach new buffer
-		sender.AttachBuffer(GetNextAudioBufferIters());
+		sender->AttachBuffer(GetNextAudioBufferIters());
 		// Run harmonic analysis
-		std::async(std::launch::async, std::bind(&PitchAnalyzer::Analyze, this, args));
+		async(launch::async, bind(&PitchAnalyzer::Analyze, this, args));
 	}
 
 	PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
@@ -45,24 +53,24 @@ namespace winrt::Tuner::implementation
 		// Get the nearest note above or equal
 		auto high = noteFrequencies.lower_bound(frequency);
 		// Get the nearest note below
-		auto low = std::prev(high);
+		auto low = prev(high);
 
-		WINRT_ASSERT(*high <= *(std::prev(noteFrequencies.end())) && *high > * (noteFrequencies.begin()));
+		WINRT_ASSERT(*high <= *(prev(noteFrequencies.end())) && *high > * (noteFrequencies.begin()));
 
 		float highDiff = (*high).first - frequency;
 		float lowDiff = frequency - (*low).first;
 
 		if (highDiff < lowDiff) {
-			return { (*high).second, 1200.0f * std::log2((*high).first / frequency) };
+			return { (*high).second, 1200.0f * log2((*high).first / frequency) };
 		}
 		else {
-			return { (*low).second, 1200.0f * std::log2((*low).first / frequency) };
+			return { (*low).second, 1200.0f * log2((*low).first / frequency) };
 		}
 	}
 
 	void PitchAnalyzer::Analyze(AudioBufferIteratorPair audioBufferIters) noexcept
 	{
-		auto lock = std::lock_guard<std::mutex>(pitchAnalyzerMtx);
+		auto lock = lock_guard<std::mutex>(pitchAnalyzerMtx);
 
 		// Get helper pointers
 		sample_t* audioBufferFirst			= audioBufferIters.first;
@@ -73,15 +81,16 @@ namespace winrt::Tuner::implementation
 
 		// Execute FFT on the input signal
 		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
-	
 		// Apply FIR filter to the input signal
-		std::transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst,  std::multiplies<complex_t>());
+		transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst,  multiplies<complex_t>());
 
 #ifdef LOG_ANALYSIS
 		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
+#else
+		sleep_for(500ms);
 #endif
 
-		float firstHarmonic = GetFirstHarmonic(fftResultFirst, fftResultLast, samplingFrequency);
+		float firstHarmonic = HarmonicProductSpectrum(fftResultFirst, fftResultLast);
 
 		// Check if frequency of the peak is in the requested range
 		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
@@ -89,17 +98,16 @@ namespace winrt::Tuner::implementation
 			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		// Push analyzed buffer to the end of the queue
 		audioBufferIterPairQueue.push(audioBufferIters);
 	}
 
-	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
+	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() const noexcept
 	{
 		// Constant needed for note frequencies calculation
-		const float a{ std::pow(2.0f, 1.0f / 12.0f) };
-		const std::vector<std::string> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-		const auto baseNoteIter{ std::next(octave.begin(), 9) };
+		const float a{ pow(2.0f, 1.0f / 12.0f) };
+		const array<string, 12> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+		const auto baseNoteIter{ next(octave.begin(), 9) };
 
 		auto octaveIter{ baseNoteIter };
 		float currentFrequency{ BASE_NOTE_FREQUENCY };
@@ -109,7 +117,7 @@ namespace winrt::Tuner::implementation
 
 		// Fill a map for notes below and equal AA
 		while (currentFrequency >= MIN_FREQUENCY) {
-			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
+			currentFrequency = BASE_NOTE_FREQUENCY * pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps--;
 
@@ -134,7 +142,7 @@ namespace winrt::Tuner::implementation
 				currentOctave++;
 			}
 
-			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
+			currentFrequency = BASE_NOTE_FREQUENCY * pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps++;
 			octaveIter++;
@@ -148,10 +156,10 @@ namespace winrt::Tuner::implementation
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
 	}
 
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
+	IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
 	{
 		// Check if FFT plan was created earlier
-		bool loadFFTResult = co_await LoadFFTPlan();
+		bool loadFFTResult{ co_await LoadFFTPlan() };
 		if (!loadFFTResult) {
 			fftPlan = fftwf_plan_dft_r2c_1d(
 				FFT_RESULT_SIZE,
@@ -170,13 +178,13 @@ namespace winrt::Tuner::implementation
 		}
 
 		// Generate filter coefficients
-		DSP::GenerateBandPassFIR(
+		GenerateBandPassFIR(
 			MIN_FREQUENCY,
 			MAX_FREQUENCY,
 			samplingFrequency,
 			filterCoeff.begin(),
 			std::next(filterCoeff.begin(), FILTER_SIZE),
-			DSP::WindowGenerator::WindowType::BlackmanHarris);
+			WindowGenerator::WindowType::BlackmanHarris);
 
 		fftwf_execute(fftPlan);
 
@@ -185,80 +193,80 @@ namespace winrt::Tuner::implementation
 #endif
 	}
 
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan()
+	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan() const noexcept
 	{
 		char* fftPlanBufferRaw{ fftwf_export_wisdom_to_string() };
-		winrt::hstring fftPlanBuffer{ winrt::to_hstring(fftPlanBufferRaw) };
+		hstring fftPlanBuffer{ winrt::to_hstring(fftPlanBufferRaw) };
 		//std::free(fftPlanBufferRaw);
 
-		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
-		Windows::Storage::StorageFile file{ co_await storageFolder.CreateFileAsync(L"fft_plan.bin", Windows::Storage::CreationCollisionOption::ReplaceExisting) };
-		co_await Windows::Storage::FileIO::WriteTextAsync(file, fftPlanBuffer);
+		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
+		StorageFile file{ co_await storageFolder.CreateFileAsync(L"fft_plan.bin", CreationCollisionOption::ReplaceExisting) };
+		co_await FileIO::WriteTextAsync(file, fftPlanBuffer);
 	}
 
-	winrt::Windows::Foundation::IAsyncOperation<bool> PitchAnalyzer::LoadFFTPlan()
+	IAsyncOperation<bool> PitchAnalyzer::LoadFFTPlan() const noexcept
 	{
-		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
-		Windows::Storage::IStorageItem storageItem{ co_await storageFolder.TryGetItemAsync(L"fft_plan.bin") };
+		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
+		IStorageItem storageItem{ co_await storageFolder.TryGetItemAsync(L"fft_plan.bin") };
 
 		if (!storageItem) {
 			co_return false;
 		}
 
-		Windows::Storage::StorageFile file = storageItem.as<Windows::Storage::StorageFile>();
-		std::string fftPlanBuffer{ winrt::to_string(co_await Windows::Storage::FileIO::ReadTextAsync(file)) };
+		StorageFile file = storageItem.as<StorageFile>();
+		string fftPlanBuffer{ winrt::to_string(co_await FileIO::ReadTextAsync(file)) };
 		fftwf_import_wisdom_from_string(fftPlanBuffer.c_str());
 
 		co_return true;
 	}
 
 #ifdef LOG_ANALYSIS
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::ExportFilterMatlab()
+	IAsyncAction PitchAnalyzer::ExportFilterMatlab() const noexcept
 	{
-		std::stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << std::endl;
-		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
-		sstr << "time_step = 1 / fs;" << std::endl;
-		sstr << "freq_step = fs / fft_size;" << std::endl;
-		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << std::endl;
-		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
+		stringstream sstr;
+		sstr << "fs = " << samplingFrequency << ";" << endl;
+		sstr << "filter_size = " << FILTER_SIZE << ";" << endl;
+		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << endl;
+		sstr << "time_step = 1 / fs;" << endl;
+		sstr << "freq_step = fs / fft_size;" << endl;
+		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << endl;
+		sstr << "n = 0 : freq_step : fs - freq_step;" << endl;
 		sstr << "filter = " << "[ ";
 		for (auto& val : filterCoeff) {
 			sstr << val << " ";
 		}
-		sstr << " ];" << std::endl;
+		sstr << " ];" << endl;
 
 		sstr << "filter_freq_response = " << "[ ";
 		for (auto& val : filterFreqResponse) {
-			sstr << 20.0f * std::log10(std::abs(val)) << " ";
+			sstr << 20.0f * log10(abs(val)) << " ";
 		}
-		sstr << " ];" << std::endl;
-		sstr << "nexttile" << std::endl;
-		sstr << "plot(t, filter(1 : filter_size))" << std::endl;
-		sstr << "xlabel('Time [s]')" << std::endl;
-		sstr << "title('Impulse response')" << std::endl;
-		sstr << "nexttile" << std::endl;
-		sstr << "plot(n, filter_freq_response)" << std::endl;
-		sstr << "xlabel('Frequency [Hz]')" << std::endl;
-		sstr << "ylabel('Magnitude [dB]')" << std::endl;
-		sstr << "title('Transfer function')" << std::endl;
+		sstr << " ];" << endl;
+		sstr << "nexttile" << endl;
+		sstr << "plot(t, filter(1 : filter_size))" << endl;
+		sstr << "xlabel('Time [s]')" << endl;
+		sstr << "title('Impulse response')" << endl;
+		sstr << "nexttile" << endl;
+		sstr << "plot(n, filter_freq_response)" << endl;
+		sstr << "xlabel('Frequency [Hz]')" << endl;
+		sstr << "ylabel('Magnitude [dB]')" << endl;
+		sstr << "title('Transfer function')" << endl;
 
-		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
-		Windows::Storage::StorageFile file{ co_await storageFolder.CreateFileAsync(L"filter_log.m", Windows::Storage::CreationCollisionOption::ReplaceExisting) };
-		co_await Windows::Storage::FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
+		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
+		StorageFile file{ co_await storageFolder.CreateFileAsync(L"filter_log.m", CreationCollisionOption::ReplaceExisting) };
+		co_await FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
 	}
 
-	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst)
+	IAsyncAction PitchAnalyzer::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst) const noexcept
 	{
-		std::stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << std::endl;
-		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << std::endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
-		sstr << "time_step = 1 / fs;" << std::endl;
-		sstr << "freq_step = fs / fft_size;" << std::endl;
-		sstr << "t = 0 : time_step : (input_size - 1) * time_step;" << std::endl;
-		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
+		stringstream sstr;
+		sstr << "fs = " << samplingFrequency << ";" << endl;
+		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << endl;
+		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << endl;
+		sstr << "time_step = 1 / fs;" << endl;
+		sstr << "freq_step = fs / fft_size;" << endl;
+		sstr << "t = 0 : time_step : (input_size - 1) * time_step;" << endl;
+		sstr << "n = 0 : freq_step : fs - freq_step;" << endl;
 
 		sstr << "input = " << "[ ";
 		auto audioBufferLast = audioBufferFirst + AUDIO_BUFFER_SIZE;
@@ -266,29 +274,29 @@ namespace winrt::Tuner::implementation
 			sstr << *audioBufferFirst << " ";
 			audioBufferFirst++;
 		}
-		sstr << " ];" << std::endl;
+		sstr << " ];" << endl;
 
 		sstr << "spectrum = " << "[ ";
 		auto fftResultLast = fftResultFirst + FFT_RESULT_SIZE;
 		while (fftResultFirst != fftResultLast) {
-			sstr << 20.0f * std::log10(std::abs(*fftResultFirst)) << " ";
+			sstr << 20.0f * log10(abs(*fftResultFirst)) << " ";
 			fftResultFirst++;
 		}
 
-		sstr << " ];" << std::endl;
-		sstr << "nexttile" << std::endl;
-		sstr << "plot(t, input(1 : input_size))" << std::endl;
-		sstr << "xlabel('Time [s]')" << std::endl;
-		sstr << "title('Input signal')" << std::endl;
-		sstr << "nexttile" << std::endl;
-		sstr << "plot(n, spectrum)" << std::endl;
-		sstr << "xlabel('Frequency [Hz]')" << std::endl;
-		sstr << "ylabel('Magnitude [dB]')" << std::endl;
-		sstr << "title('Spectrum')" << std::endl;
+		sstr << " ];" << endl;
+		sstr << "nexttile" << endl;
+		sstr << "plot(t, input(1 : input_size))" << endl;
+		sstr << "xlabel('Time [s]')" << endl;
+		sstr << "title('Input signal')" << endl;
+		sstr << "nexttile" << endl;
+		sstr << "plot(n, spectrum)" << endl;
+		sstr << "xlabel('Frequency [Hz]')" << endl;
+		sstr << "ylabel('Magnitude [dB]')" << endl;
+		sstr << "title('Spectrum')" << endl;
 
-		Windows::Storage::StorageFolder storageFolder{ Windows::Storage::ApplicationData::Current().LocalFolder() };
-		Windows::Storage::StorageFile file{ co_await storageFolder.CreateFileAsync(L"analysis_log.m", Windows::Storage::CreationCollisionOption::ReplaceExisting) };
-		co_await Windows::Storage::FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
+		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
+		StorageFile file{ co_await storageFolder.CreateFileAsync(L"analysis_log.m", CreationCollisionOption::ReplaceExisting) };
+		co_await FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
 	}
 #endif
 }

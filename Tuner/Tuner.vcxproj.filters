@@ -60,7 +60,4 @@
     <None Include="libfftw3f-3.dll" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="readme.txt" />
-  </ItemGroup>
 </Project>

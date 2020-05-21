@@ -3,9 +3,12 @@
 #include "MainPage.g.cpp"
 
 using namespace std;
-using namespace std::placeholders;
+using namespace placeholders;
 using namespace winrt;
+using namespace Windows::UI;
 using namespace Windows::UI::Xaml;
+using namespace Windows::UI::Xaml::Media;
+using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::Foundation;
 using namespace Windows::System;
 
@@ -29,75 +32,79 @@ namespace winrt::Tuner::implementation
 
 	IAsyncAction MainPage::InitializeFunctionality()
 	{
-		co_await audioInput.Initialize();
-		pitchAnalyzer.SoundAnalyzed(std::bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
+		AudioInputInitializationStatus initStatus{ co_await audioInput.InitializeAsync() };
+
+		if (initStatus != AudioInputInitializationStatus::Success) {
+			co_return;
+		}
+
+		pitchAnalyzer.SoundAnalyzed(bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
 		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
 		co_await pitchAnalyzer.InitializeAsync();
 		// Get first buffer from queue and attach it to AudioInput class object
 		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
 		// Attach callback function
-		audioInput.BufferFilled(std::bind(&PitchAnalyzer::AudioInput_BufferFilled, &pitchAnalyzer, _1, _2));
-		// Start recording audio
+		audioInput.BufferFilled(bind(&PitchAnalyzer::AudioInput_BufferFilled, &pitchAnalyzer, _1, _2));
 		audioInput.Start();
 	}
 
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
-		co_await winrt::resume_foreground(Note_TextBlock().Dispatcher());
+		co_await resume_foreground(Note_TextBlock().Dispatcher());
 
-		// Get the nearest note on the screen
+		// Put the nearest note on the screen
 		Note_TextBlock().Text(to_hstring(note));
 
 		// ... and control its color and circles below, depending on the accuracy of recorded sound
 		// Note acuurate
 		if (abs(cents) <= 1.0f) {
-			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::YellowGreen()));
+			Note_TextBlock().Foreground(SolidColorBrush(Colors::YellowGreen()));
 
-			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Low().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Middle().Fill(Media::SolidColorBrush(Windows::UI::Colors::YellowGreen()));
-			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
+			Lowest().Fill(SolidColorBrush(Colors::Transparent()));
+			Low().Fill(SolidColorBrush(Colors::Transparent()));
+			Middle().Fill(SolidColorBrush(Colors::YellowGreen()));
+			High().Fill(SolidColorBrush(Colors::Transparent()));
+			Highest().Fill(SolidColorBrush(Colors::Transparent()));
 		}
 		// Note too low
 		else if (cents < -1.0f && cents > -6.0f) {
-			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
+			Note_TextBlock().Foreground(SolidColorBrush(Colors::DarkRed()));
 
-			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Low().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
-			Middle().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
+			Lowest().Fill(SolidColorBrush(Colors::Transparent()));
+			Low().Fill(SolidColorBrush(Colors::DarkRed()));
+			Middle().Fill(SolidColorBrush(Colors::Transparent()));
+			High().Fill(SolidColorBrush(Colors::Transparent()));
+			Highest().Fill(SolidColorBrush(Colors::Transparent()));
 		}
 		// Note way too low
 		else if (cents <= -6.0f) {
-			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
+			Note_TextBlock().Foreground(SolidColorBrush(Colors::DarkRed()));
 
-			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
-			Low().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
-			Middle().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
+			Lowest().Fill(SolidColorBrush(Colors::DarkRed()));
+			Low().Fill(SolidColorBrush(Colors::DarkRed()));
+			Middle().Fill(SolidColorBrush(Colors::Transparent()));
+			High().Fill(SolidColorBrush(Colors::Transparent()));
+			Highest().Fill(SolidColorBrush(Colors::Transparent()));
 		}
 		// Note too high
 		else if (cents > 1.0f && cents < 6.0f) {
-			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
+			Note_TextBlock().Foreground(SolidColorBrush(Colors::DarkRed()));
 
-			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Low().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Middle().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
-			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
+			Lowest().Fill(SolidColorBrush(Colors::Transparent()));
+			Low().Fill(SolidColorBrush(Colors::Transparent()));
+			Middle().Fill(SolidColorBrush(Colors::Transparent()));
+			High().Fill(SolidColorBrush(Colors::DarkRed()));
+			Highest().Fill(SolidColorBrush(Colors::Transparent()));
 		}
 		// Note way too high
 		else if (cents >= 6.0f) {
-			Note_TextBlock().Foreground(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
+			Note_TextBlock().Foreground(SolidColorBrush(Colors::DarkRed()));
 
-			Lowest().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Low().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			Middle().Fill(Media::SolidColorBrush(Windows::UI::Colors::Transparent()));
-			High().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
-			Highest().Fill(Media::SolidColorBrush(Windows::UI::Colors::DarkRed()));
+			Lowest().Fill(SolidColorBrush(Colors::Transparent()));
+			Low().Fill(SolidColorBrush(Colors::Transparent()));
+			Middle().Fill(SolidColorBrush(Colors::Transparent()));
+			High().Fill(SolidColorBrush(Colors::DarkRed()));
+			Highest().Fill(SolidColorBrush(Colors::DarkRed()));
 		}
 	}
 }

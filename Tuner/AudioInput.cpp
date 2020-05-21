@@ -5,25 +5,25 @@ using namespace std;
 using namespace winrt;
 using namespace winrt::Windows;
 using namespace winrt::Windows::Media;
-using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::Audio;
 using namespace winrt::Windows::Media::Capture;
-using namespace winrt::Windows::Devices::Enumeration;
 using namespace winrt::Windows::Media::MediaProperties;
+using namespace winrt::Windows::Media::Render;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Devices::Enumeration;
 
 namespace winrt::Tuner::implementation
 {
 	// Get an instance of AudioInput class
-	IAsyncAction AudioInput::Initialize()
+	future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
 	{
-		audioSettings = AudioGraphSettings(Render::AudioRenderCategory::Media);
-
+		audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
 		// Start async operation that creates new audio graph
 		CreateAudioGraphResult graphCreation{ co_await AudioGraph::CreateAsync(audioSettings) };
 
 		// Check if succesfully created
 		if (graphCreation.Status() != AudioGraphCreationStatus::Success) {
-			throw runtime_error("AudioGraph creation failed.");
+			co_return AudioInputInitializationStatus::Failure; // throw runtime_error("AudioGraph creation failed.");
 		}
 		else {
 			// Get created graph
@@ -38,12 +38,13 @@ namespace winrt::Tuner::implementation
 
 			// Check if succesful
 			if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success) {
-				throw runtime_error("AudioDeviceInputNode creation failed.");
+				co_return AudioInputInitializationStatus::Failure; // throw runtime_error("AudioDeviceInputNode creation failed.");
 			}
 			else {
 				inputDevice = nodeCreation.DeviceInputNode();
 				// Input from the recording device is routed to frameOutputNode
 				inputDevice.AddOutgoingConnection(frameOutputNode);
+				co_return AudioInputInitializationStatus::Success;
 			}
 		}
 	}
@@ -52,7 +53,7 @@ namespace winrt::Tuner::implementation
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
 		AudioFrame frame = frameOutputNode.GetFrame();
-		Media::AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
+		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
 
 		unsigned char* byte = nullptr;
@@ -65,18 +66,26 @@ namespace winrt::Tuner::implementation
 		WINRT_ASSERT(byte);
 		
 		if (current + buffer.Length() < last) {
-			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
+			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
 			current += buffer.Length();
 		}
 		else {
 			auto distance = last - current;
-			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
-			bufferFilledCallback(*this, audioBufferIters);
+			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
+			bufferFilledCallback(this, audioBufferIters);
 			current += distance;
 		}
 	}
 
-	AudioInput::AudioInput() : audioGraph{ nullptr }, audioSettings{ nullptr }, inputDevice{ nullptr }, frameOutputNode{ nullptr }, bufferFilledCallback{ nullptr }
+	AudioInput::AudioInput() : 
+		bufferFilledCallback{ nullptr },
+		audioGraph{ nullptr }, 
+		audioSettings{ nullptr }, 
+		inputDevice{ nullptr }, 
+		frameOutputNode{ nullptr }, 
+		first{ nullptr },
+		current{ nullptr },
+		last{ nullptr }
 	{
 	}
 

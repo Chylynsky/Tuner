@@ -25,6 +25,7 @@
 #include <winrt/WIndows.Devices.Enumeration.h>
 #include <winrt/Windows.Media.MediaProperties.h>
 
+#include <algorithm>
 #include <thread>
 #include <chrono>
 #include <vector>
