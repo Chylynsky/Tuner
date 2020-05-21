@@ -3,7 +3,7 @@
   <Identity
     Name="91783b72-cb88-409c-9d2b-6f817eff00e3"
     Publisher="CN=Borys Chyliński"
-    Version="1.0.2.0" />
+    Version="1.0.3.0" />
   <mp:PhoneIdentity PhoneProductId="91783b72-cb88-409c-9d2b-6f817eff00e3" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
     <DisplayName>Tuner</DisplayName>
