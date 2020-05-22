@@ -9,9 +9,9 @@ Solution consists of two main parts:
 ## Notes
 
 - When *LOG_ANALYSIS* macro is defined in *PitchAnalyzer.h*, *filter_log.m* and *analysis_log.m* Matlab files are generated
-	to application's LocalState directory allowing further inspection.
-- Best way to find these files is to search for them (AppData is a hidden folder) in *C:\Users\{username}\AppData*
-- Tuner project's compilation is dependant on *DSP* project.
+	to application's *LocalState* directory allowing further inspection.
+- Best way to find these files is to search for them in *C:\Users\username\AppData* (AppData is a hidden folder)
+- *Tuner* project's compilation is dependant on *DSP* project.
 
 ## Screenshots
 

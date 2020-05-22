@@ -17,7 +17,7 @@ namespace winrt::Tuner::implementation
 	// Get an instance of AudioInput class
 	future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
 	{
-		audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
+		audioSettings = AudioGraphSettings(AudioRenderCategory::Other);
 		// Start async operation that creates new audio graph
 		CreateAudioGraphResult graphCreation{ co_await AudioGraph::CreateAsync(audioSettings) };
 
@@ -32,7 +32,6 @@ namespace winrt::Tuner::implementation
 			frameOutputNode = audioGraph.CreateFrameOutputNode();
 			// Attach callback
 			audioGraph.QuantumStarted({ this, &AudioInput::audioGraph_QuantumStarted });
-
 			// Start audio input device node creation
 			CreateAudioDeviceInputNodeResult nodeCreation{ co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media) };
 
@@ -65,15 +64,15 @@ namespace winrt::Tuner::implementation
 
 		WINRT_ASSERT(byte);
 		
-		if (current + buffer.Length() < last) {
+		if (std::next(current, buffer.Length()) < last) {
 			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
-			current += buffer.Length();
+			advance(current, buffer.Length());
 		}
 		else {
-			auto distance = last - current;
+			auto distance = std::distance(current, last);
 			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
 			bufferFilledCallback(this, audioBufferIters);
-			current += distance;
+			advance(current, distance);
 		}
 	}
 

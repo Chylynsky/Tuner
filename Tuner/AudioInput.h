@@ -15,7 +15,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		using BufferFilledCallback = std::function<void(AudioInput* sender, const std::pair<float*, float*> args)>;
+		using BufferFilledCallback = std::function<void(const AudioInput& sender, const std::pair<float*, float*>& args)>;
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;

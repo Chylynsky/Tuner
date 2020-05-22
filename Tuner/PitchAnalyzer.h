@@ -2,7 +2,7 @@
 #include "AudioInput.h"
 #include "FilterGenerator.h"
 
-//#define LOG_ANALYSIS
+#define LOG_ANALYSIS
 #if defined NDEBUG && defined LOG_ANALYSIS
 #undef LOG_ANALYSIS
 #endif
@@ -66,8 +66,9 @@ namespace winrt::Tuner::implementation
 		// Returns std::pair of pointers to available audio buffer <first; last)
 		AudioBufferIteratorPair GetNextAudioBufferIters() noexcept;
 
-		// AudioInput BufferFilled event callback
-		void AudioInput_BufferFilled(AudioInput* sender, const AudioBufferIteratorPair args) noexcept;
+		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
+		// for each analysis performed.
+		void Analyze(AudioBufferIteratorPair audioBufferIters) noexcept;
 
 	private:
 
@@ -100,10 +101,6 @@ namespace winrt::Tuner::implementation
 		// Analyzes input frequency and returns a filled PitchAnalysisResult struct
 		PitchAnalysisResult GetNote(float frequency) const noexcept;
 
-		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
-		// for each analysis performed.
-		void Analyze(AudioBufferIteratorPair audioBufferIters) noexcept;
-
 		// Function used for filling the noteFrequencies std::map
 		NoteFrequenciesMap InitializeNoteFrequenciesMap() const noexcept;
 
@@ -127,9 +124,15 @@ namespace winrt::Tuner::implementation
 		this->samplingFrequency = samplingFrequency;
 	}
 
+	inline void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
+	{
+		WINRT_ASSERT(soundAnalyzedCallback);
+		this->soundAnalyzedCallback = soundAnalyzedCallback;
+	}
+
 	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
 	{
-		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
+		WINRT_ASSERT(!audioBufferIterPairQueue.empty(), "Timing problem.");
 
 		auto iters = audioBufferIterPairQueue.front();
 		audioBufferIterPairQueue.pop();
@@ -139,13 +142,13 @@ namespace winrt::Tuner::implementation
 	template<typename iter>
 	inline float PitchAnalyzer::HarmonicProductSpectrum(iter first, iter last) const noexcept
 	{
+		WINRT_ASSERT(std::distance<iter>(first, last) > 0, "Not a valid iterator range.");
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		// Number of samples
 		const diff_t N = std::distance<iter>(first, last);
 		// Iterator to the upper frequency boundary
 		const iter maxFreqIter{ std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency))) };
-
 		WINRT_ASSERT(maxFreqIter <= last);
 
 		std::pair<float, float> highestSumIndex{ 0.0, 0.0 };
@@ -158,9 +161,7 @@ namespace winrt::Tuner::implementation
 			currentSumIndex = std::make_pair(
 				std::abs(*std::next(first, n)) *
 				std::abs(*std::next(first, 2 * n)) *
-				std::abs(*std::next(first, 3 * n)) *
-				std::abs(*std::next(first, 4 * n)) *
-				std::abs(*std::next(first, 5 * n)), n);
+				std::abs(*std::next(first, 3 * n)), n);
 			if (currentSumIndex.first > highestSumIndex.first) {
 				highestSumIndex = currentSumIndex;
 			}

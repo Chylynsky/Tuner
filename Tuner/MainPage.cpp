@@ -44,7 +44,7 @@ namespace winrt::Tuner::implementation
 		// Get first buffer from queue and attach it to AudioInput class object
 		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
 		// Attach callback function
-		audioInput.BufferFilled(bind(&PitchAnalyzer::AudioInput_BufferFilled, &pitchAnalyzer, _1, _2));
+		audioInput.BufferFilled(bind(&MainPage::AudioInput_BufferFilled, this, _1, _2));
 		audioInput.Start();
 	}
 
@@ -106,5 +106,13 @@ namespace winrt::Tuner::implementation
 			High().Fill(SolidColorBrush(Colors::DarkRed()));
 			Highest().Fill(SolidColorBrush(Colors::DarkRed()));
 		}
+	}
+
+	void MainPage::AudioInput_BufferFilled(const AudioInput& sender, const std::pair<float*, float*>& args) noexcept
+	{
+		// Attach new buffer
+		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
+		// Run harmonic analysis
+		async(launch::async, bind(&PitchAnalyzer::Analyze, &pitchAnalyzer, args));
 	}
 }

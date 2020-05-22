@@ -17,6 +17,7 @@ namespace winrt::Tuner::implementation
 
         winrt::Windows::Foundation::IAsyncAction InitializeFunctionality();
         winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float frequency, float cents);
+        void AudioInput_BufferFilled(const AudioInput& sender, const std::pair<float*, float*>& args) noexcept;
     };
 }
 

@@ -3,9 +3,9 @@
 
 using namespace DSP;
 using namespace std;
-using namespace std::this_thread;
-using namespace std::chrono;
-using namespace std::chrono_literals;
+using namespace this_thread;
+using namespace chrono;
+using namespace chrono_literals;
 using namespace winrt;
 using namespace Windows::Storage;
 using namespace Windows::Foundation;
@@ -39,15 +39,6 @@ namespace winrt::Tuner::implementation
 		fftwf_cleanup();
 	}
 
-	void PitchAnalyzer::AudioInput_BufferFilled(AudioInput* sender, const PitchAnalyzer::AudioBufferIteratorPair args) noexcept
-	{
-		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
-		// Attach new buffer
-		sender->AttachBuffer(GetNextAudioBufferIters());
-		// Run harmonic analysis
-		async(launch::async, bind(&PitchAnalyzer::Analyze, this, args));
-	}
-
 	PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
 	{
 		// Get the nearest note above or equal
@@ -66,40 +57,6 @@ namespace winrt::Tuner::implementation
 		else {
 			return { (*low).second, 1200.0f * log2((*low).first / frequency) };
 		}
-	}
-
-	void PitchAnalyzer::Analyze(AudioBufferIteratorPair audioBufferIters) noexcept
-	{
-		auto lock = lock_guard<std::mutex>(pitchAnalyzerMtx);
-
-		// Get helper pointers
-		sample_t* audioBufferFirst			= audioBufferIters.first;
-		sample_t* outputFirst				= outputSignal.data();
-		complex_t* filterFreqResponseFirst	= filterFreqResponse.data();
-		complex_t* fftResultFirst			= fftResult.data();
-		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;
-
-		// Execute FFT on the input signal
-		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
-		// Apply FIR filter to the input signal
-		transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst,  multiplies<complex_t>());
-
-#ifdef LOG_ANALYSIS
-		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
-#else
-		sleep_for(500ms);
-#endif
-
-		float firstHarmonic = HarmonicProductSpectrum(fftResultFirst, fftResultLast);
-
-		// Check if frequency of the peak is in the requested range
-		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
-			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
-			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
-		}
-
-		// Push analyzed buffer to the end of the queue
-		audioBufferIterPairQueue.push(audioBufferIters);
 	}
 
 	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() const noexcept
@@ -151,11 +108,6 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
-	void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
-	{
-		this->soundAnalyzedCallback = soundAnalyzedCallback;
-	}
-
 	IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
 	{
 		// Check if FFT plan was created earlier
@@ -191,6 +143,41 @@ namespace winrt::Tuner::implementation
 #ifdef LOG_ANALYSIS
 		ExportFilterMatlab();
 #endif
+	}
+
+	void PitchAnalyzer::Analyze(AudioBufferIteratorPair audioBufferIters) noexcept
+	{
+		WINRT_ASSERT(soundAnalyzedCallback, "SoundAnalyzed callback must be attached before performing analysis.");
+		auto lock{ lock_guard<std::mutex>(pitchAnalyzerMtx) };
+
+		// Get helper pointers
+		sample_t* audioBufferFirst = audioBufferIters.first;
+		sample_t* outputFirst = outputSignal.data();
+		complex_t* filterFreqResponseFirst = filterFreqResponse.data();
+		complex_t* fftResultFirst = fftResult.data();
+		complex_t* fftResultLast = fftResultFirst + FFT_RESULT_SIZE;
+
+		// Execute FFT on the input signal
+		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+		// Apply FIR filter to the input signal
+		transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, multiplies<complex_t>());
+
+#ifdef LOG_ANALYSIS
+		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
+#else
+		sleep_for(500ms);
+#endif
+
+		float firstHarmonic = HarmonicProductSpectrum(fftResultFirst, fftResultLast);
+
+		// Check if frequency of the peak is in the requested range
+		if (firstHarmonic >= MIN_FREQUENCY && firstHarmonic <= MAX_FREQUENCY) {
+			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
+			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
+		}
+
+		// Push analyzed buffer to the end of the queue
+		audioBufferIterPairQueue.push(audioBufferIters);
 	}
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan() const noexcept
