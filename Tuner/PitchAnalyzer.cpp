@@ -1,14 +1,9 @@
 ﻿#include "pch.h"
 #include "PitchAnalyzer.h"
 
-using namespace DSP;
-using namespace std;
-using namespace this_thread;
-using namespace chrono;
-using namespace chrono_literals;
 using namespace winrt;
-using namespace Windows::Storage;
-using namespace Windows::Foundation;
+using namespace winrt::Windows::Storage;
+using namespace winrt::Windows::Foundation;
 
 namespace winrt::Tuner::implementation
 {
@@ -42,20 +37,20 @@ namespace winrt::Tuner::implementation
 	PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
 	{
 		// Get the nearest note above or equal
-		auto high = noteFrequencies.lower_bound(frequency);
+		auto high{ noteFrequencies.lower_bound(frequency) };
 		// Get the nearest note below
-		auto low = prev(high);
+		auto low{ std::prev(high) };
 
-		WINRT_ASSERT(*high <= *(prev(noteFrequencies.end())) && *high > * (noteFrequencies.begin()));
+		WINRT_ASSERT(*high <= *(std::prev(noteFrequencies.end())) && *high > * (noteFrequencies.begin()));
 
-		float highDiff = (*high).first - frequency;
-		float lowDiff = frequency - (*low).first;
+		float highDiff{ (*high).first - frequency };
+		float lowDiff{ frequency - (*low).first };
 
 		if (highDiff < lowDiff) {
-			return { (*high).second, 1200.0f * log2((*high).first / frequency) };
+			return { (*high).second, 1200.0f * std::log2((*high).first / frequency) };
 		}
 		else {
-			return { (*low).second, 1200.0f * log2((*low).first / frequency) };
+			return { (*low).second, 1200.0f * std::log2((*low).first / frequency) };
 		}
 	}
 
@@ -63,8 +58,8 @@ namespace winrt::Tuner::implementation
 	{
 		// Constant needed for note frequencies calculation
 		const float a{ pow(2.0f, 1.0f / 12.0f) };
-		const array<string, 12> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-		const auto baseNoteIter{ next(octave.begin(), 9) };
+		const std::vector<std::string> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+		const auto baseNoteIter{ std::next(octave.begin(), 9) };
 
 		auto octaveIter{ baseNoteIter };
 		float currentFrequency{ BASE_NOTE_FREQUENCY };
@@ -74,7 +69,7 @@ namespace winrt::Tuner::implementation
 
 		// Fill a map for notes below and equal AA
 		while (currentFrequency >= MIN_FREQUENCY) {
-			currentFrequency = BASE_NOTE_FREQUENCY * pow(a, halfSteps);
+			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps--;
 
@@ -99,7 +94,7 @@ namespace winrt::Tuner::implementation
 				currentOctave++;
 			}
 
-			currentFrequency = BASE_NOTE_FREQUENCY * pow(a, halfSteps);
+			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps++;
 			octaveIter++;
@@ -112,6 +107,7 @@ namespace winrt::Tuner::implementation
 	{
 		// Check if FFT plan was created earlier
 		bool loadFFTResult{ co_await LoadFFTPlan() };
+
 		if (!loadFFTResult) {
 			fftPlan = fftwf_plan_dft_r2c_1d(
 				FFT_RESULT_SIZE,
@@ -130,25 +126,26 @@ namespace winrt::Tuner::implementation
 		}
 
 		// Generate filter coefficients
-		GenerateBandPassFIR(
+		DSP::GenerateBandPassFIR(
 			MIN_FREQUENCY,
 			MAX_FREQUENCY,
 			samplingFrequency,
 			filterCoeff.begin(),
 			std::next(filterCoeff.begin(), FILTER_SIZE),
-			WindowGenerator::WindowType::BlackmanHarris);
+			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
 		fftwf_execute(fftPlan);
 
-#ifdef LOG_ANALYSIS
+#ifdef CREATE_MATLAB_PLOTS
 		ExportFilterMatlab();
 #endif
+
 	}
 
-	void PitchAnalyzer::Analyze(AudioBufferIteratorPair audioBufferIters) noexcept
+	void PitchAnalyzer::Analyze(const AudioBufferIteratorPair& audioBufferIters) noexcept
 	{
-		WINRT_ASSERT(soundAnalyzedCallback, "SoundAnalyzed callback must be attached before performing analysis.");
-		auto lock{ lock_guard<std::mutex>(pitchAnalyzerMtx) };
+		// SoundAnalyzed callback must be attached before performing analysis.
+		WINRT_ASSERT(soundAnalyzedCallback);
 
 		// Get helper pointers
 		sample_t* audioBufferFirst = audioBufferIters.first;
@@ -160,12 +157,12 @@ namespace winrt::Tuner::implementation
 		// Execute FFT on the input signal
 		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
 		// Apply FIR filter to the input signal
-		transform(fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, multiplies<complex_t>());
+		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());
 
-#ifdef LOG_ANALYSIS
+#ifdef CREATE_MATLAB_PLOTS
 		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
-#else
-		sleep_for(500ms);
+		// Pause execution, Matlab .m files are now ready
+		__debugbreak();
 #endif
 
 		float firstHarmonic = HarmonicProductSpectrum(fftResultFirst, fftResultLast);
@@ -176,7 +173,7 @@ namespace winrt::Tuner::implementation
 			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
 
-		// Push analyzed buffer to the end of the queue
+		// Put iterator pair back in the queue
 		audioBufferIterPairQueue.push(audioBufferIters);
 	}
 
@@ -184,7 +181,6 @@ namespace winrt::Tuner::implementation
 	{
 		char* fftPlanBufferRaw{ fftwf_export_wisdom_to_string() };
 		hstring fftPlanBuffer{ winrt::to_hstring(fftPlanBufferRaw) };
-		//std::free(fftPlanBufferRaw);
 
 		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
 		StorageFile file{ co_await storageFolder.CreateFileAsync(L"fft_plan.bin", CreationCollisionOption::ReplaceExisting) };
@@ -201,43 +197,43 @@ namespace winrt::Tuner::implementation
 		}
 
 		StorageFile file = storageItem.as<StorageFile>();
-		string fftPlanBuffer{ winrt::to_string(co_await FileIO::ReadTextAsync(file)) };
+		std::string fftPlanBuffer{ winrt::to_string(co_await FileIO::ReadTextAsync(file)) };
 		fftwf_import_wisdom_from_string(fftPlanBuffer.c_str());
 
 		co_return true;
 	}
 
-#ifdef LOG_ANALYSIS
+#ifdef CREATE_MATLAB_PLOTS
 	IAsyncAction PitchAnalyzer::ExportFilterMatlab() const noexcept
 	{
-		stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << endl;
-		sstr << "filter_size = " << FILTER_SIZE << ";" << endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << endl;
-		sstr << "time_step = 1 / fs;" << endl;
-		sstr << "freq_step = fs / fft_size;" << endl;
-		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << endl;
-		sstr << "n = 0 : freq_step : fs - freq_step;" << endl;
+		std::stringstream sstr;
+		sstr << "fs = " << samplingFrequency << ";" << std::endl;
+		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
+		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
+		sstr << "time_step = 1 / fs;" << std::endl;
+		sstr << "freq_step = fs / fft_size;" << std::endl;
+		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << std::endl;
+		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
 		sstr << "filter = " << "[ ";
 		for (auto& val : filterCoeff) {
 			sstr << val << " ";
 		}
-		sstr << " ];" << endl;
+		sstr << " ];" << std::endl;
 
 		sstr << "filter_freq_response = " << "[ ";
 		for (auto& val : filterFreqResponse) {
-			sstr << 20.0f * log10(abs(val)) << " ";
+			sstr << 20.0f * std::log10(std::abs(val)) << " ";
 		}
-		sstr << " ];" << endl;
-		sstr << "nexttile" << endl;
-		sstr << "plot(t, filter(1 : filter_size))" << endl;
-		sstr << "xlabel('Time [s]')" << endl;
-		sstr << "title('Impulse response')" << endl;
-		sstr << "nexttile" << endl;
-		sstr << "plot(n, filter_freq_response)" << endl;
-		sstr << "xlabel('Frequency [Hz]')" << endl;
-		sstr << "ylabel('Magnitude [dB]')" << endl;
-		sstr << "title('Transfer function')" << endl;
+		sstr << " ];" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "plot(t, filter(1 : filter_size))" << std::endl;
+		sstr << "xlabel('Time [s]')" << std::endl;
+		sstr << "title('FIR filter impulse response')" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "plot(n, filter_freq_response)" << std::endl;
+		sstr << "xlabel('Frequency [Hz]')" << std::endl;
+		sstr << "ylabel('Magnitude [dB]')" << std::endl;
+		sstr << "title('FIR filter transfer function')" << std::endl;
 
 		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
 		StorageFile file{ co_await storageFolder.CreateFileAsync(L"filter_log.m", CreationCollisionOption::ReplaceExisting) };
@@ -246,14 +242,14 @@ namespace winrt::Tuner::implementation
 
 	IAsyncAction PitchAnalyzer::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst) const noexcept
 	{
-		stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << endl;
-		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << endl;
-		sstr << "time_step = 1 / fs;" << endl;
-		sstr << "freq_step = fs / fft_size;" << endl;
-		sstr << "t = 0 : time_step : (input_size - 1) * time_step;" << endl;
-		sstr << "n = 0 : freq_step : fs - freq_step;" << endl;
+		std::stringstream sstr;
+		sstr << "fs = " << samplingFrequency << ";" << std::endl;
+		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << std::endl;
+		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
+		sstr << "time_step = 1 / fs;" << std::endl;
+		sstr << "freq_step = fs / fft_size;" << std::endl;
+		sstr << "t = 0 : time_step : (input_size - 1) * time_step;" << std::endl;
+		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
 
 		sstr << "input = " << "[ ";
 		auto audioBufferLast = audioBufferFirst + AUDIO_BUFFER_SIZE;
@@ -261,25 +257,25 @@ namespace winrt::Tuner::implementation
 			sstr << *audioBufferFirst << " ";
 			audioBufferFirst++;
 		}
-		sstr << " ];" << endl;
+		sstr << " ];" << std::endl;
 
 		sstr << "spectrum = " << "[ ";
 		auto fftResultLast = fftResultFirst + FFT_RESULT_SIZE;
 		while (fftResultFirst != fftResultLast) {
-			sstr << 20.0f * log10(abs(*fftResultFirst)) << " ";
+			sstr << 20.0f * std::log10(std::abs(*fftResultFirst)) << " ";
 			fftResultFirst++;
 		}
 
-		sstr << " ];" << endl;
-		sstr << "nexttile" << endl;
-		sstr << "plot(t, input(1 : input_size))" << endl;
-		sstr << "xlabel('Time [s]')" << endl;
-		sstr << "title('Input signal')" << endl;
-		sstr << "nexttile" << endl;
-		sstr << "plot(n, spectrum)" << endl;
-		sstr << "xlabel('Frequency [Hz]')" << endl;
-		sstr << "ylabel('Magnitude [dB]')" << endl;
-		sstr << "title('Spectrum')" << endl;
+		sstr << " ];" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "plot(t, input(1 : input_size))" << std::endl;
+		sstr << "xlabel('Time [s]')" << std::endl;
+		sstr << "title('Raw input signal')" << std::endl;
+		sstr << "nexttile" << std::endl;
+		sstr << "plot(n, spectrum)" << std::endl;
+		sstr << "xlabel('Frequency [Hz]')" << std::endl;
+		sstr << "ylabel('Magnitude [dB]')" << std::endl;
+		sstr << "title('Filtered input signal amplitude spectrum')" << std::endl;
 
 		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
 		StorageFile file{ co_await storageFolder.CreateFileAsync(L"analysis_log.m", CreationCollisionOption::ReplaceExisting) };

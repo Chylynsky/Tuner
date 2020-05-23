@@ -8,7 +8,7 @@ Solution consists of two main parts:
 
 ## Notes
 
-- When *LOG_ANALYSIS* macro is defined in *PitchAnalyzer.h*, *filter_log.m* and *analysis_log.m* Matlab files are generated
+- When *CREATE_MATLAB_PLOTS* macro is defined in *PitchAnalyzer.h*, *filter_log.m* and *analysis_log.m* Matlab files are generated
 	to application's *LocalState* directory allowing further inspection.
 - Best way to find these files is to search for them in *C:\Users\username\AppData* (AppData is a hidden folder)
 - *Tuner* project's compilation is dependant on *DSP* project.
@@ -19,7 +19,7 @@ Solution consists of two main parts:
 
 ![Main page](/images/app_main_page.png)
 
-### Generated FIR filter based on Blackman-Harris window (plot from auto-generated Matlab file using LOG_ANALYSIS macro):
+### Generated FIR filter based on Blackman-Harris window (plot from auto-generated Matlab file using CREATE_MATLAB_PLOTS macro):
 
 ![FIR filter](/images/fir_filter1.png)
 

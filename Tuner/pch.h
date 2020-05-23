@@ -44,4 +44,5 @@
 #include <future>
 #include <type_traits>
 #include <sstream>
+#include <execution>
 #include "fftw3.h"

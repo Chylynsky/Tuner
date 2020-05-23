@@ -2,8 +2,7 @@
 #include "MainPage.h"
 #include "MainPage.g.cpp"
 
-using namespace std;
-using namespace placeholders;
+using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI;
 using namespace Windows::UI::Xaml;
@@ -113,6 +112,6 @@ namespace winrt::Tuner::implementation
 		// Attach new buffer
 		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
 		// Run harmonic analysis
-		async(launch::async, bind(&PitchAnalyzer::Analyze, &pitchAnalyzer, args));
+		pitchAnalyzer.Analyze(args);
 	}
 }

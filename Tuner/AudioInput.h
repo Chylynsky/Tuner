@@ -45,7 +45,7 @@ namespace winrt::Tuner::implementation
 		// Stop recording audio data
 		void Stop() const noexcept;
 
-		void AttachBuffer(std::pair<float*, float*> audioBufferIters) noexcept;
+		void AttachBuffer(const std::pair<float*, float*>& audioBufferIters) noexcept;
 
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 
@@ -67,7 +67,7 @@ namespace winrt::Tuner::implementation
 		audioGraph.Stop();
 	}
 
-	inline void AudioInput::AttachBuffer(std::pair<float*, float*> audioBufferIters) noexcept
+	inline void AudioInput::AttachBuffer(const std::pair<float*, float*>& audioBufferIters) noexcept
 	{
 		this->audioBufferIters = audioBufferIters;
 		first = current = audioBufferIters.first;

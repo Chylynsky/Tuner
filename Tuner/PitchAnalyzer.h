@@ -2,10 +2,15 @@
 #include "AudioInput.h"
 #include "FilterGenerator.h"
 
-#define LOG_ANALYSIS
-#if defined NDEBUG && defined LOG_ANALYSIS
-#undef LOG_ANALYSIS
+// Enable/disable Matlab code generation
+// If defined, debugging will stop on every 
+// sound analysis performed
+//#define CREATE_MATLAB_PLOTS
+
+#if defined NDEBUG && defined CREATE_MATLAB_PLOTS
+#undef CREATE_MATLAB_PLOTS
 #endif
+
 #ifdef max
 #undef max
 #endif
@@ -25,8 +30,8 @@ namespace winrt::Tuner::implementation
 		using AudioBufferIteratorPair	= std::pair<sample_t*, sample_t*>;
 		using FFTResultBuffer			= std::vector<complex_t>;
 		using NoteFrequenciesMap		= std::map<sample_t, std::string>;
-		using AudioBufferArray			= std::array<AudioBuffer, 4>;
-		using AudioBufferQueue			= std::queue<AudioBufferIteratorPair>;
+		using AudioBufferArray			= std::array<AudioBuffer, 2>;
+		using AudioBufferIterPairQueue	= std::queue<AudioBufferIteratorPair>;
 		using SoundAnalyzedCallback		= std::function<void(const std::string& note, float frequency, float cents)>;
 
 		// Struct holding the result of each, returned from GetNote() function.
@@ -42,12 +47,12 @@ namespace winrt::Tuner::implementation
 		static constexpr uint32_t FFT_RESULT_SIZE{ OUTPUT_SIGNAL_SIZE / 2U + 1U };
 
 		// Requested frequency range
-		static constexpr float MIN_FREQUENCY{ 60.0f };
-		static constexpr float MAX_FREQUENCY{ 1800.0f };
+		static constexpr float MIN_FREQUENCY{ 80.0f };
+		static constexpr float MAX_FREQUENCY{ 1200.0f };
 		// A4 base note frequency
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
-		float samplingFrequency{ 48000.0f };
+		float samplingFrequency{ 44100.0f };
 
 		PitchAnalyzer();
 		~PitchAnalyzer();
@@ -68,19 +73,17 @@ namespace winrt::Tuner::implementation
 
 		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
 		// for each analysis performed.
-		void Analyze(AudioBufferIteratorPair audioBufferIters) noexcept;
+		void Analyze(const AudioBufferIteratorPair& audioBufferIters) noexcept;
 
 	private:
 
 		// Event handlers
 		SoundAnalyzedCallback soundAnalyzedCallback;
 
-		std::mutex pitchAnalyzerMtx;
-
 		fftwf_plan fftPlan;
 		FFTResultBuffer fftResult;
 
-		// Map where key - frequency, value - note
+		// Frequencies and notes that represents them are stored in std::map<float, std::string>
 		const NoteFrequenciesMap noteFrequencies{ InitializeNoteFrequenciesMap() };
 
 		// FIR filter parameters
@@ -93,7 +96,7 @@ namespace winrt::Tuner::implementation
 		// Array of buffers that hold recorded samples
 		AudioBufferArray audioBuffersArray;
 		// Queue of available buffers
-		AudioBufferQueue audioBufferIterPairQueue;
+		AudioBufferIterPairQueue audioBufferIterPairQueue;
 
 		template<typename iter>
 		float HarmonicProductSpectrum(iter first, iter last) const noexcept;
@@ -110,13 +113,13 @@ namespace winrt::Tuner::implementation
 		// Load fftwf_plan
 		winrt::Windows::Foundation::IAsyncOperation<bool> LoadFFTPlan() const noexcept;
 
-#ifdef LOG_ANALYSIS
+#ifdef CREATE_MATLAB_PLOTS
 		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction ExportFilterMatlab() const noexcept;
 
 		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst) const noexcept;
-#endif;
+#endif
 	};
 
 	inline void PitchAnalyzer::SetSamplingFrequency(float samplingFrequency) noexcept
@@ -132,17 +135,17 @@ namespace winrt::Tuner::implementation
 
 	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
 	{
-		WINRT_ASSERT(!audioBufferIterPairQueue.empty(), "Timing problem.");
-
+		// Checks if timing is correct
+		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
 		auto iters = audioBufferIterPairQueue.front();
 		audioBufferIterPairQueue.pop();
 		return iters;
 	}
 
 	template<typename iter>
-	inline float PitchAnalyzer::HarmonicProductSpectrum(iter first, iter last) const noexcept
+	float PitchAnalyzer::HarmonicProductSpectrum(iter first, iter last) const noexcept
 	{
-		WINRT_ASSERT(std::distance<iter>(first, last) > 0, "Not a valid iterator range.");
+		WINRT_ASSERT(std::distance<iter>(first, last) > 0);
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		// Number of samples
@@ -157,11 +160,11 @@ namespace winrt::Tuner::implementation
 		// Index of the sample representing lower frequency bound
 		diff_t n{ static_cast<diff_t>(MIN_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency) };
 
-		for (; std::next(first, 5 * n) < maxFreqIter; n++) {
+		for (; std::next(first, n) < maxFreqIter; n++) {
 			currentSumIndex = std::make_pair(
 				std::abs(*std::next(first, n)) *
-				std::abs(*std::next(first, 2 * n)) *
-				std::abs(*std::next(first, 3 * n)), n);
+				((2 * n <= N) ? std::abs(*std::next(first, 2 * n)) : 0) *
+				((3 * n <= N) ? std::abs(*std::next(first, 3 * n)) : 0), n);
 			if (currentSumIndex.first > highestSumIndex.first) {
 				highestSumIndex = currentSumIndex;
 			}

@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "AudioInput.h"
 
-using namespace std;
 using namespace winrt;
 using namespace winrt::Windows;
 using namespace winrt::Windows::Media;
@@ -15,7 +14,7 @@ using namespace winrt::Windows::Devices::Enumeration;
 namespace winrt::Tuner::implementation
 {
 	// Get an instance of AudioInput class
-	future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
+	std::future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
 	{
 		audioSettings = AudioGraphSettings(AudioRenderCategory::Other);
 		// Start async operation that creates new audio graph
@@ -65,14 +64,16 @@ namespace winrt::Tuner::implementation
 		WINRT_ASSERT(byte);
 		
 		if (std::next(current, buffer.Length()) < last) {
-			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
-			advance(current, buffer.Length());
+			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
+			//std::memcpy(current, byte, buffer.Length());
+			std::advance(current, buffer.Length() / sizeof(float));
 		}
 		else {
 			auto distance = std::distance(current, last);
-			copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
-			bufferFilledCallback(this, audioBufferIters);
-			advance(current, distance);
+			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
+			//std::memcpy(current, byte, distance);
+			std::advance(current, distance / sizeof(float));
+			bufferFilledCallback(*this, audioBufferIters);
 		}
 	}
 
