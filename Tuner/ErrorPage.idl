@@ -1,0 +1,9 @@
+namespace Tuner
+{
+    [default_interface]
+    runtimeclass ErrorPage : Windows.UI.Xaml.Controls.Page
+    {
+        ErrorPage();
+        Int32 MyProperty;
+    }
+}

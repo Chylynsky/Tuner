@@ -161,7 +161,7 @@ namespace winrt::Tuner::implementation
 
 #ifdef CREATE_MATLAB_PLOTS
 		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
-		// Pause execution, Matlab .m files are now ready
+		// Pause debugging, Matlab .m files are now ready
 		__debugbreak();
 #endif
 

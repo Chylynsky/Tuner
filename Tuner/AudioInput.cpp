@@ -88,9 +88,4 @@ namespace winrt::Tuner::implementation
 		last{ nullptr }
 	{
 	}
-
-	AudioInput::~AudioInput()
-	{
-		audioGraph.Close();
-	}
 }

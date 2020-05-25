@@ -15,6 +15,7 @@
 #include <winrt/Windows.UI.Xaml.Navigation.h>
 #include <winrt/Windows.UI.Xaml.Shapes.h>
 #include <winrt/Windows.UI.Xaml.Media.h>
+#include <winrt/Windows.UI.Xaml.Media.Animation.h>
 
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Media.h>
@@ -22,8 +23,9 @@
 #include <winrt/Windows.Media.Capture.h>
 #include <winrt/Windows.UI.h>
 #include <winrt/Windows.UI.Core.h>
-#include <winrt/WIndows.Devices.Enumeration.h>
+#include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Media.MediaProperties.h>
+#include <winrt/Windows.System.h>
 
 #include <algorithm>
 #include <thread>

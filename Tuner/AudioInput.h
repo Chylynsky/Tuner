@@ -36,7 +36,6 @@ namespace winrt::Tuner::implementation
 	public:
 
 		AudioInput();
-		~AudioInput();
 
 		// Get an instance of AudioInput class
 		std::future<AudioInputInitializationStatus> InitializeAsync();

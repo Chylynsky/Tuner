@@ -171,6 +171,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AudioInput.h" />
+    <ClInclude Include="ErrorPage.h">
+      <DependentUpon>ErrorPage.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </ClInclude>
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.h">
       <DependentUpon>App.xaml</DependentUpon>
@@ -184,6 +188,9 @@
     <ApplicationDefinition Include="App.xaml">
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="ErrorPage.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="MainPage.xaml">
       <SubType>Designer</SubType>
     </Page>
@@ -204,6 +211,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AudioInput.cpp" />
+    <ClCompile Include="ErrorPage.cpp">
+      <DependentUpon>ErrorPage.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </ClCompile>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -219,6 +230,10 @@
   <ItemGroup>
     <Midl Include="App.idl">
       <DependentUpon>App.xaml</DependentUpon>
+    </Midl>
+    <Midl Include="ErrorPage.idl">
+      <DependentUpon>ErrorPage.xaml</DependentUpon>
+      <SubType>Code</SubType>
     </Midl>
     <Midl Include="MainPage.idl">
       <DependentUpon>MainPage.xaml</DependentUpon>
