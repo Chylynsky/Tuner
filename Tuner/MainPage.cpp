@@ -18,6 +18,20 @@ namespace winrt::Tuner::implementation
 	MainPage::MainPage()
     {
         InitializeComponent();
+
+		dots[0] = Dot0();
+		dots[1] = Dot1();
+		dots[2] = Dot2();
+		dots[3] = Dot3();
+		dots[4] = Dot4();
+		dots[5] = Dot5();
+		dots[6] = Dot6();
+		dots[7] = Dot7();
+		dots[8] = Dot8();
+		dots[9] = Dot9();
+		dots[10] = Dot10();
+		dots[11] = Dot11();
+		dots[12] = Dot12();
     }
 
 	MainPage::~MainPage()
@@ -36,19 +50,23 @@ namespace winrt::Tuner::implementation
 
 	IAsyncAction MainPage::Page_Loaded(IInspectable const& sender, RoutedEventArgs const& e)
 	{
-		bool initResult{ co_await InitializeFunctionality() };
+		co_await SetStateAsync(MainPageState::Loading);
 
-		if (!initResult) {
-			this->Frame().Navigate(xaml_typename<Tuner::ErrorPage>());
+		InitializationStatus initResult{ co_await InitializeFunctionality() };
+
+		if (initResult != InitializationStatus::Success) {
+			co_await SetStateAsync(MainPageState::Error);
 		}
+
+		co_await SetStateAsync(MainPageState::Tuning);
 	}
 
-	IAsyncOperation<bool> MainPage::InitializeFunctionality()
+	std::future<MainPage::InitializationStatus> MainPage::InitializeFunctionality()
 	{
 		AudioInputInitializationStatus initStatus{ co_await audioInput.InitializeAsync() };
 
 		if (initStatus != AudioInputInitializationStatus::Success) {
-			co_return false;
+			co_return InitializationStatus::Failure;
 		}
 
 		pitchAnalyzer.SoundAnalyzed(bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
@@ -62,28 +80,130 @@ namespace winrt::Tuner::implementation
 		audioInput.BufferFilled(bind(&MainPage::AudioInput_BufferFilled, this, _1, _2));
 		audioInput.Start();
 
-		co_return true;
+		co_return InitializationStatus::Success;
 	}
 
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
-		co_await resume_foreground(Note_TextBlock().Dispatcher());
+		co_await resume_foreground(TuningScreen().Dispatcher());
 
 		// Put the nearest note on the screen
 		Note_TextBlock().Text(to_hstring(note));
-		Dot_Viewbox().Margin({ 0.0, 0.0, cents, 0 });
 
-		if (float tmp = std::abs(cents); tmp <= 2.0f) {
-			Dot().Fill(SolidColorBrush(Colors::YellowGreen()));
-			Note_TextBlock().Foreground(SolidColorBrush(Colors::YellowGreen()));
+		for (auto& dot : dots) {
+			dot.Fill(Color::Gray());
 		}
-		else if (tmp > 2.0f && tmp <= 10.0f) {
-			Dot().Fill(SolidColorBrush(Colors::Orange()));
-			Note_TextBlock().Foreground(SolidColorBrush(Colors::Orange()));
+
+		// Note in tune
+		if (cents <= 2.0f && cents >= -2.0f) {
+			Note_TextBlock().Foreground(Color::Green());
+			middleDotIter->Fill(Color::Green());
 		}
-		else {
-			Dot().Fill(SolidColorBrush(Colors::DarkRed()));
-			Note_TextBlock().Foreground(SolidColorBrush(Colors::DarkRed()));
+		// Notes above the desired frequency
+		else if (cents > 2.0f && cents <= 5.0f) {
+			Note_TextBlock().Foreground(Color::Green());
+			middleDotIter->Fill(Color::Green());
+			(std::next(middleDotIter, 1))->Fill(Color::Green());
+		}
+		else if (cents > 5.0f && cents <= 10.0f) {
+			Note_TextBlock().Foreground(Color::Orange());
+			middleDotIter->Fill(Color::Orange());
+			(std::next(middleDotIter, 1))->Fill(Color::Orange());
+			(std::next(middleDotIter, 2))->Fill(Color::Orange());
+		}
+		else if (cents > 10.0f && cents <= 15.0f) {
+			Note_TextBlock().Foreground(Color::Orange());
+			middleDotIter->Fill(Color::Orange());
+			(std::next(middleDotIter, 1))->Fill(Color::Orange());
+			(std::next(middleDotIter, 2))->Fill(Color::Orange());
+			(std::next(middleDotIter, 3))->Fill(Color::Orange());
+		}
+		else if (cents > 15.0f && cents <= 300.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::next(middleDotIter, 1))->Fill(Color::Red());
+			(std::next(middleDotIter, 2))->Fill(Color::Red());
+			(std::next(middleDotIter, 3))->Fill(Color::Red());
+		}
+		else if (cents > 300.0f && cents <= 600.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::next(middleDotIter, 1))->Fill(Color::Red());
+			(std::next(middleDotIter, 2))->Fill(Color::Red());
+			(std::next(middleDotIter, 3))->Fill(Color::Red());
+			(std::next(middleDotIter, 4))->Fill(Color::Red());
+		}
+		else if (cents > 600.0f && cents <= 700.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::next(middleDotIter, 1))->Fill(Color::Red());
+			(std::next(middleDotIter, 2))->Fill(Color::Red());
+			(std::next(middleDotIter, 3))->Fill(Color::Red());
+			(std::next(middleDotIter, 4))->Fill(Color::Red());
+			(std::next(middleDotIter, 5))->Fill(Color::Red());
+		}
+		else if (cents > 700.0f && cents <= 1200.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::next(middleDotIter, 1))->Fill(Color::Red());
+			(std::next(middleDotIter, 2))->Fill(Color::Red());
+			(std::next(middleDotIter, 3))->Fill(Color::Red());
+			(std::next(middleDotIter, 4))->Fill(Color::Red());
+			(std::next(middleDotIter, 5))->Fill(Color::Red());
+			(std::next(middleDotIter, 6))->Fill(Color::Red());
+		}
+		// Notes below the desired frequency
+		else if (cents < -2.0f && cents >= -5.0f) {
+			Note_TextBlock().Foreground(Color::Green());
+			middleDotIter->Fill(Color::Green());
+			(std::prev(middleDotIter, 1))->Fill(Color::Green());
+		}
+		else if (cents < -5.0f && cents >= -10.0f) {
+			Note_TextBlock().Foreground(Color::Orange());
+			middleDotIter->Fill(Color::Orange());
+			(std::prev(middleDotIter, 1))->Fill(Color::Orange());
+			(std::prev(middleDotIter, 2))->Fill(Color::Orange());
+		}
+		else if (cents < -10.0f && cents >= -15.0f) {
+			Note_TextBlock().Foreground(Color::Orange());
+			middleDotIter->Fill(Color::Orange());
+			(std::prev(middleDotIter, 1))->Fill(Color::Orange());
+			(std::prev(middleDotIter, 2))->Fill(Color::Orange());
+			(std::prev(middleDotIter, 3))->Fill(Color::Orange());
+		}
+		else if (cents < -15.0f && cents >= -300.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::prev(middleDotIter, 1))->Fill(Color::Red());
+			(std::prev(middleDotIter, 2))->Fill(Color::Red());
+			(std::prev(middleDotIter, 3))->Fill(Color::Red());
+		}
+		else if (cents < -300.0f && cents >= -600.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::prev(middleDotIter, 1))->Fill(Color::Red());
+			(std::prev(middleDotIter, 2))->Fill(Color::Red());
+			(std::prev(middleDotIter, 3))->Fill(Color::Red());
+			(std::prev(middleDotIter, 4))->Fill(Color::Red());
+		}
+		else if (cents < -600.0f && cents >= -900.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::prev(middleDotIter, 1))->Fill(Color::Red());
+			(std::prev(middleDotIter, 2))->Fill(Color::Red());
+			(std::prev(middleDotIter, 3))->Fill(Color::Red());
+			(std::prev(middleDotIter, 4))->Fill(Color::Red());
+			(std::prev(middleDotIter, 5))->Fill(Color::Red());
+		}
+		else if (cents < -900.0f && cents >= -1200.0f) {
+			Note_TextBlock().Foreground(Color::Red());
+			middleDotIter->Fill(Color::Red());
+			(std::prev(middleDotIter, 1))->Fill(Color::Red());
+			(std::prev(middleDotIter, 2))->Fill(Color::Red());
+			(std::prev(middleDotIter, 3))->Fill(Color::Red());
+			(std::prev(middleDotIter, 4))->Fill(Color::Red());
+			(std::prev(middleDotIter, 5))->Fill(Color::Red());
+			(std::prev(middleDotIter, 6))->Fill(Color::Red());
 		}
 	}
 
@@ -93,5 +213,24 @@ namespace winrt::Tuner::implementation
 		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
 		// Run harmonic analysis
 		pitchAnalyzer.Analyze(args);
+	}
+
+	IAsyncAction MainPage::SetStateAsync(MainPageState state)
+	{
+		co_await resume_foreground(Note_TextBlock().Dispatcher());
+
+		switch (state) {
+		case MainPageState::Loading:
+			LoadingScreen().Visibility(Visibility::Visible);
+			TuningScreen().Visibility(Visibility::Collapsed);
+			break;
+		case MainPageState::Tuning:
+			LoadingScreen().Visibility(Visibility::Collapsed);
+			TuningScreen().Visibility(Visibility::Visible);
+			break;
+		default: 
+			this->Frame().Navigate(xaml_typename<Tuner::ErrorPage>()); 
+			break;
+		}
 	}
 }

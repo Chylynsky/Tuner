@@ -8,21 +8,75 @@
     mc:Ignorable="d"
     Loaded="Page_Loaded">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="0.8*"/>
-            <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="0.1*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0.1*"/>
-            <ColumnDefinition Width="1*"/>
-            <ColumnDefinition Width="0.1*"/>
-        </Grid.ColumnDefinitions>
-        <Viewbox Grid.Row="0" Grid.ColumnSpan="3" Grid.RowSpan="2">
-            <TextBlock x:Name="Note_TextBlock" Foreground="YellowGreen" TextAlignment="Center" HorizontalTextAlignment="Center"/>
-        </Viewbox>
-        <Viewbox x:Name="Dot_Viewbox" Grid.Row="1" Grid.Column="1">
-            <Ellipse x:Name="Dot" VerticalAlignment="Center" Height="100" Fill="YellowGreen" Width="100"/>
-        </Viewbox>
+        <Grid x:Name="LoadingScreen" Visibility="Collapsed">
+            <TextBlock HorizontalAlignment="Center" Text="Loading..." TextWrapping="WrapWholeWords" VerticalAlignment="Center" FontSize="42"/>
+
+        </Grid>
+        <Grid x:Name="TuningScreen" Visibility="Visible">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.8*"/>
+                <RowDefinition Height="0.1*"/>
+                <RowDefinition Height="0.1*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+            <Viewbox Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="11">
+                <TextBlock x:Name="Note_TextBlock" Foreground="YellowGreen" TextAlignment="Center" HorizontalTextAlignment="Center"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot0_Viewbox" Grid.Row="1" Grid.Column="1" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot0" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot1_Viewbox" Grid.Row="1" Grid.Column="2" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot1" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot2_Viewbox" Grid.Row="1" Grid.Column="3" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot2" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot3_Viewbox" Grid.Row="1" Grid.Column="4" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot3" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot4_Viewbox" Grid.Row="1" Grid.Column="5" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot4" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot5_Viewbox" Grid.Row="1" Grid.Column="6" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot5" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot6_Viewbox" Grid.Row="1" Grid.Column="7" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot6" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot7_Viewbox" Grid.Row="1" Grid.Column="8" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot7" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot8_Viewbox" Grid.Row="1" Grid.Column="9" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot8" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot9_Viewbox" Grid.Row="1" Grid.Column="10" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot9" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot10_Viewbox" Grid.Row="1" Grid.Column="11" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot10" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot11_Viewbox" Grid.Row="1" Grid.Column="12" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot11" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+            <Viewbox x:Name="Dot12_Viewbox" Grid.Row="1" Grid.Column="13" Margin="5, 0, 5, 0">
+                <Ellipse x:Name="Dot12" VerticalAlignment="Center" Height="100" Fill="DimGray" Width="100"/>
+            </Viewbox>
+        </Grid>
     </Grid>
 </Page>

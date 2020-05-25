@@ -27,6 +27,7 @@
 #include <winrt/Windows.Media.MediaProperties.h>
 #include <winrt/Windows.System.h>
 
+#include <array>
 #include <algorithm>
 #include <thread>
 #include <chrono>

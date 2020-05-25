@@ -5,7 +5,7 @@
 // Enable/disable Matlab code generation
 // If defined, debugging will stop on every 
 // sound analysis performed
-//#define CREATE_MATLAB_PLOTS
+#define CREATE_MATLAB_PLOTS
 
 #if defined NDEBUG && defined CREATE_MATLAB_PLOTS
 #undef CREATE_MATLAB_PLOTS
