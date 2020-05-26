@@ -148,11 +148,11 @@ namespace winrt::Tuner::implementation
 		WINRT_ASSERT(soundAnalyzedCallback);
 
 		// Get helper pointers
-		sample_t* audioBufferFirst = audioBufferIters.first;
-		sample_t* outputFirst = outputSignal.data();
-		complex_t* filterFreqResponseFirst = filterFreqResponse.data();
-		complex_t* fftResultFirst = fftResult.data();
-		complex_t* fftResultLast = fftResultFirst + FFT_RESULT_SIZE;
+		sample_t* audioBufferFirst			= audioBufferIters.first;
+		sample_t* outputSignalFirst			= outputSignal.data();
+		complex_t* filterFreqResponseFirst	= filterFreqResponse.data();
+		complex_t* fftResultFirst			= fftResult.data();
+		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;
 
 		// Execute FFT on the input signal
 		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
@@ -172,7 +172,6 @@ namespace winrt::Tuner::implementation
 			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
 			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
-
 		// Put iterator pair back in the queue
 		audioBufferIterPairQueue.push(audioBufferIters);
 	}

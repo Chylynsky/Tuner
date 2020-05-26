@@ -7,35 +7,35 @@ namespace DSP
 	{
 		// Generate Gaussian window coefficients
 		template<typename iter>
-		static void GenerateGaussianWindow(iter first, iter last) noexcept;
+		static void GenerateGaussianWindow(iter first, const iter last) noexcept;
 
 		// Generate Triangular window coefficients
 		template<typename iter>
-		static void GenerateTriangularWindow(iter first, iter last) noexcept;
+		static void GenerateTriangularWindow(iter first, const iter last) noexcept;
 
 		// Generate Welch window coefficients
 		template<typename iter>
-		static void GenerateWelchWindow(iter first, iter last) noexcept;
+		static void GenerateWelchWindow(iter first, iter const last) noexcept;
 
 		// Generate Hann window coefficients
 		template<typename iter>
-		static void GenerateHannWindow(iter first, iter last) noexcept;
+		static void GenerateHannWindow(iter first, iter const last) noexcept;
 
 		// Generate Hamming window coefficients
 		template<typename iter>
-		static void GenerateHammingWindow(iter first, iter last) noexcept;
+		static void GenerateHammingWindow(iter first, iter const last) noexcept;
 
 		// Generate Blackman window coefficients
 		template<typename iter>
-		static void GenerateBlackmanWindow(iter first, iter last) noexcept;
+		static void GenerateBlackmanWindow(iter first, iter const last) noexcept;
 
 		// Generate Blckman-Nuttall window coefficients
 		template<typename iter>
-		static void GenerateBlackmanNuttallWindow(iter first, iter last) noexcept;
+		static void GenerateBlackmanNuttallWindow(iter first, iter const last) noexcept;
 
 		// Generate Blackman-Harris window coefficients
 		template<typename iter>
-		static void GenerateBlackmanHarrisWindow(iter first, iter last) noexcept;
+		static void GenerateBlackmanHarrisWindow(iter first, iter const last) noexcept;
 
 	public:
 
@@ -52,11 +52,11 @@ namespace DSP
 
 		// Generate the choosen window
 		template<typename iter>
-		static void Generate(WindowType type, iter first, iter last) noexcept;
+		static void Generate(WindowType type, iter first, const iter last) noexcept;
 	};
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateGaussianWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateGaussianWindow(iter first, const iter last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -75,7 +75,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateTriangularWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateTriangularWindow(iter first, const iter last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -92,7 +92,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateWelchWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateWelchWindow(iter first, iter const last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -109,7 +109,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateHannWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateHannWindow(iter first, iter const last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -126,7 +126,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateHammingWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateHammingWindow(iter first, iter const last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -146,7 +146,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateBlackmanWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateBlackmanWindow(iter first, iter const last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -167,7 +167,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateBlackmanNuttallWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateBlackmanNuttallWindow(iter first, const iter last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -189,7 +189,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::GenerateBlackmanHarrisWindow(iter first, iter last) noexcept
+	inline void WindowGenerator::GenerateBlackmanHarrisWindow(iter first, const iter last) noexcept
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -211,7 +211,7 @@ namespace DSP
 	}
 
 	template<typename iter>
-	inline void WindowGenerator::Generate(WindowType type, iter first, iter last) noexcept
+	inline void WindowGenerator::Generate(WindowType type, iter first, const iter last) noexcept
 	{
 		switch (type) {
 		case WindowType::Gauss:				WindowGenerator::GenerateGaussianWindow(first, last);			break;

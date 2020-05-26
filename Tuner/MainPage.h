@@ -29,7 +29,6 @@ namespace winrt::Tuner::implementation
         AudioInput audioInput;
 		PitchAnalyzer pitchAnalyzer;
         std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13> dots;
-        std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>::const_iterator middleDotIter{ std::next(dots.cbegin(), 6) };
 
         MainPage();
         ~MainPage();
@@ -42,7 +41,7 @@ namespace winrt::Tuner::implementation
         winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float frequency, float cents);
         void AudioInput_BufferFilled(const AudioInput& sender, const std::pair<float*, float*>& args) noexcept;
         winrt::Windows::Foundation::IAsyncAction SetStateAsync(MainPageState state);
-        void ColorDots(int index, const Color& color);
+        void ColorForeground(int indexMin, int indexMax, const winrt::Windows::UI::Xaml::Media::SolidColorBrush& color);
     };
 
     inline winrt::Windows::UI::Xaml::Media::SolidColorBrush MainPage::Color::Gray() noexcept

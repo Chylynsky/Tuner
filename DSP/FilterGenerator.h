@@ -5,7 +5,7 @@
 namespace DSP
 {
 	template<typename T1, typename T2, typename iter>
-	void GenerateBandPassFIR(T1 fc1, T1 fc2, T2 samplingFreq, iter first, iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateBandPassFIR(T1 fc1, T1 fc2, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -30,7 +30,7 @@ namespace DSP
 	}
 
 	template<typename T1, typename T2, typename iter>
-	void GenerateLowPassFIR(T1 fc, T2 samplingFreq, iter first, iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateLowPassFIR(T1 fc, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
@@ -53,7 +53,7 @@ namespace DSP
 	}
 
 	template<typename T1, typename T2, typename iter>
-	void GenerateHighPassFIR(T1 fc, T2 samplingFreq, iter first, iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateHighPassFIR(T1 fc, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
 		using value_t = typename std::iterator_traits<iter>::value_type;
 		using diff_t = typename std::iterator_traits<iter>::difference_type;

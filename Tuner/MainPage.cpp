@@ -19,6 +19,7 @@ namespace winrt::Tuner::implementation
     {
         InitializeComponent();
 
+		// Gather dots in array
 		dots[0] = Dot0();
 		dots[1] = Dot1();
 		dots[2] = Dot2();
@@ -90,120 +91,53 @@ namespace winrt::Tuner::implementation
 		// Put the nearest note on the screen
 		Note_TextBlock().Text(to_hstring(note));
 
-		for (auto& dot : dots) {
-			dot.Fill(Color::Gray());
-		}
-
 		// Note in tune
 		if (cents <= 2.0f && cents >= -2.0f) {
-			Note_TextBlock().Foreground(Color::Green());
-			middleDotIter->Fill(Color::Green());
+			ColorForeground(6, 6, Color::Green());
 		}
 		// Notes above the desired frequency
 		else if (cents > 2.0f && cents <= 5.0f) {
-			Note_TextBlock().Foreground(Color::Green());
-			middleDotIter->Fill(Color::Green());
-			(std::next(middleDotIter, 1))->Fill(Color::Green());
+			ColorForeground(6, 7, Color::Green());
 		}
 		else if (cents > 5.0f && cents <= 10.0f) {
-			Note_TextBlock().Foreground(Color::Orange());
-			middleDotIter->Fill(Color::Orange());
-			(std::next(middleDotIter, 1))->Fill(Color::Orange());
-			(std::next(middleDotIter, 2))->Fill(Color::Orange());
+			ColorForeground(6, 8, Color::Orange());
 		}
 		else if (cents > 10.0f && cents <= 15.0f) {
-			Note_TextBlock().Foreground(Color::Orange());
-			middleDotIter->Fill(Color::Orange());
-			(std::next(middleDotIter, 1))->Fill(Color::Orange());
-			(std::next(middleDotIter, 2))->Fill(Color::Orange());
-			(std::next(middleDotIter, 3))->Fill(Color::Orange());
+			ColorForeground(6, 9, Color::Orange());
 		}
 		else if (cents > 15.0f && cents <= 300.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::next(middleDotIter, 1))->Fill(Color::Red());
-			(std::next(middleDotIter, 2))->Fill(Color::Red());
-			(std::next(middleDotIter, 3))->Fill(Color::Red());
+			ColorForeground(6, 9, Color::Red());
 		}
 		else if (cents > 300.0f && cents <= 600.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::next(middleDotIter, 1))->Fill(Color::Red());
-			(std::next(middleDotIter, 2))->Fill(Color::Red());
-			(std::next(middleDotIter, 3))->Fill(Color::Red());
-			(std::next(middleDotIter, 4))->Fill(Color::Red());
+			ColorForeground(6, 10, Color::Red());
 		}
 		else if (cents > 600.0f && cents <= 700.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::next(middleDotIter, 1))->Fill(Color::Red());
-			(std::next(middleDotIter, 2))->Fill(Color::Red());
-			(std::next(middleDotIter, 3))->Fill(Color::Red());
-			(std::next(middleDotIter, 4))->Fill(Color::Red());
-			(std::next(middleDotIter, 5))->Fill(Color::Red());
+			ColorForeground(6, 11, Color::Red());
 		}
 		else if (cents > 700.0f && cents <= 1200.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::next(middleDotIter, 1))->Fill(Color::Red());
-			(std::next(middleDotIter, 2))->Fill(Color::Red());
-			(std::next(middleDotIter, 3))->Fill(Color::Red());
-			(std::next(middleDotIter, 4))->Fill(Color::Red());
-			(std::next(middleDotIter, 5))->Fill(Color::Red());
-			(std::next(middleDotIter, 6))->Fill(Color::Red());
+			ColorForeground(6, 12, Color::Red());
 		}
 		// Notes below the desired frequency
 		else if (cents < -2.0f && cents >= -5.0f) {
-			Note_TextBlock().Foreground(Color::Green());
-			middleDotIter->Fill(Color::Green());
-			(std::prev(middleDotIter, 1))->Fill(Color::Green());
+			ColorForeground(5, 6, Color::Green());
 		}
 		else if (cents < -5.0f && cents >= -10.0f) {
-			Note_TextBlock().Foreground(Color::Orange());
-			middleDotIter->Fill(Color::Orange());
-			(std::prev(middleDotIter, 1))->Fill(Color::Orange());
-			(std::prev(middleDotIter, 2))->Fill(Color::Orange());
+			ColorForeground(4, 6, Color::Orange());
 		}
 		else if (cents < -10.0f && cents >= -15.0f) {
-			Note_TextBlock().Foreground(Color::Orange());
-			middleDotIter->Fill(Color::Orange());
-			(std::prev(middleDotIter, 1))->Fill(Color::Orange());
-			(std::prev(middleDotIter, 2))->Fill(Color::Orange());
-			(std::prev(middleDotIter, 3))->Fill(Color::Orange());
+			ColorForeground(3, 6, Color::Orange());
 		}
 		else if (cents < -15.0f && cents >= -300.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::prev(middleDotIter, 1))->Fill(Color::Red());
-			(std::prev(middleDotIter, 2))->Fill(Color::Red());
-			(std::prev(middleDotIter, 3))->Fill(Color::Red());
+			ColorForeground(3, 6, Color::Red());
 		}
 		else if (cents < -300.0f && cents >= -600.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::prev(middleDotIter, 1))->Fill(Color::Red());
-			(std::prev(middleDotIter, 2))->Fill(Color::Red());
-			(std::prev(middleDotIter, 3))->Fill(Color::Red());
-			(std::prev(middleDotIter, 4))->Fill(Color::Red());
+			ColorForeground(2, 6, Color::Red()); 
 		}
 		else if (cents < -600.0f && cents >= -900.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::prev(middleDotIter, 1))->Fill(Color::Red());
-			(std::prev(middleDotIter, 2))->Fill(Color::Red());
-			(std::prev(middleDotIter, 3))->Fill(Color::Red());
-			(std::prev(middleDotIter, 4))->Fill(Color::Red());
-			(std::prev(middleDotIter, 5))->Fill(Color::Red());
+			ColorForeground(1, 6, Color::Red());
 		}
 		else if (cents < -900.0f && cents >= -1200.0f) {
-			Note_TextBlock().Foreground(Color::Red());
-			middleDotIter->Fill(Color::Red());
-			(std::prev(middleDotIter, 1))->Fill(Color::Red());
-			(std::prev(middleDotIter, 2))->Fill(Color::Red());
-			(std::prev(middleDotIter, 3))->Fill(Color::Red());
-			(std::prev(middleDotIter, 4))->Fill(Color::Red());
-			(std::prev(middleDotIter, 5))->Fill(Color::Red());
-			(std::prev(middleDotIter, 6))->Fill(Color::Red());
+			ColorForeground(0, 6, Color::Red());
 		}
 	}
 
@@ -231,6 +165,19 @@ namespace winrt::Tuner::implementation
 		default: 
 			this->Frame().Navigate(xaml_typename<Tuner::ErrorPage>()); 
 			break;
+		}
+	}
+
+	void MainPage::ColorForeground(int indexMin, int indexMax, const SolidColorBrush& color)
+	{
+		Note_TextBlock().Foreground(color);
+		for (int i = 0; i < dots.size(); i++) {
+			if (i >= indexMin && i <= indexMax) {
+				dots[i].Fill(color);
+			}
+			else {
+				dots[i].Fill(Color::Gray());
+			}
 		}
 	}
 }

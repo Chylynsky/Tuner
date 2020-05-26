@@ -5,7 +5,7 @@
 // Enable/disable Matlab code generation
 // If defined, debugging will stop on every 
 // sound analysis performed
-#define CREATE_MATLAB_PLOTS
+//#define CREATE_MATLAB_PLOTS
 
 #if defined NDEBUG && defined CREATE_MATLAB_PLOTS
 #undef CREATE_MATLAB_PLOTS
@@ -38,7 +38,7 @@ namespace winrt::Tuner::implementation
 		struct PitchAnalysisResult
 		{
 			const std::string& note;
-			float cents;
+			const float cents;
 		};
 
 		static constexpr uint32_t AUDIO_BUFFER_SIZE{ 1 << 16 };
@@ -149,9 +149,9 @@ namespace winrt::Tuner::implementation
 		using diff_t = typename std::iterator_traits<iter>::difference_type;
 
 		// Number of samples
-		const diff_t N = std::distance<iter>(first, last);
+		static const diff_t N{ std::distance<iter>(first, last) };
 		// Iterator to the upper frequency boundary
-		const iter maxFreqIter{ std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency))) };
+		static const iter maxFreqIter{ std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency))) };
 		WINRT_ASSERT(maxFreqIter <= last);
 
 		std::pair<float, float> highestSumIndex{ 0.0, 0.0 };
