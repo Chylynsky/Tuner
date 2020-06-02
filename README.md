@@ -11,7 +11,6 @@ Solution consists of two main parts:
 - Pitch detection is performed using a Harmonic Product Spectrum algorithm.
 - When *CREATE_MATLAB_PLOTS* macro is defined in *PitchAnalyzer.h*, *filter_log.m* and *analysis_log.m* Matlab files are generated
 	to application's *LocalState* directory allowing further inspection.
-- After each analysis performed, _debugbreak() is called
 - Best way to find these files is to search for them in *C:\Users\username\AppData* (AppData is a hidden folder)
 - *Tuner* project's compilation is dependant on *DSP* project.
 
