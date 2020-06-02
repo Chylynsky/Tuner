@@ -8,6 +8,8 @@ Solution consists of two main parts:
 
 ## Notes
 
+- During the first app launch, loading may take a while. This is due to the FFTW best peformant algorithm calculation. The result of
+	these calculations is saved locally and loaded in the next app launches.
 - Pitch detection is performed using a Harmonic Product Spectrum algorithm.
 - When *CREATE_MATLAB_PLOTS* macro is defined in *PitchAnalyzer.h*, *filter_log.m* and *analysis_log.m* Matlab files are generated
 	to application's *LocalState* directory allowing further inspection.
