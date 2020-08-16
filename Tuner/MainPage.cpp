@@ -141,7 +141,7 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	void MainPage::AudioInput_BufferFilled(const AudioInput& sender, const AudioBufferIteratorPair& args) noexcept
+	void MainPage::AudioInput_BufferFilled(const AudioInput& sender, const AudioBufferPtrPair& args) noexcept
 	{
 		// Attach new buffer
 		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());

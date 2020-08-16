@@ -29,7 +29,7 @@ namespace winrt::Tuner::implementation
 		using FFTResultBuffer			= std::vector<complex_t>;
 		using NoteFrequenciesMap		= std::map<sample_t, std::string>;
 		using AudioBufferArray			= std::array<AudioBuffer, 2>;
-		using AudioBufferIterPairQueue	= std::queue<AudioBufferIteratorPair>;
+		using AudioBufferPtrPairQueue	= std::queue<AudioBufferPtrPair>;
 		using SoundAnalyzedCallback		= std::function<void(const std::string& note, float frequency, float cents)>;
 
 		// Struct holding the result of each, returned from GetNote() function.
@@ -67,11 +67,11 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync() noexcept;
 
 		// Returns std::pair of pointers to available audio buffer <first; last)
-		AudioBufferIteratorPair GetNextAudioBufferIters() noexcept;
+		AudioBufferPtrPair GetNextAudioBufferIters() noexcept;
 
 		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
 		// for each analysis performed.
-		void Analyze(const AudioBufferIteratorPair& audioBufferIters) noexcept;
+		void Analyze(const AudioBufferPtrPair& audioBufferIters) noexcept;
 
 	private:
 
@@ -94,7 +94,7 @@ namespace winrt::Tuner::implementation
 		// Array of buffers that hold recorded samples
 		AudioBufferArray audioBuffersArray;
 		// Queue of available buffers
-		AudioBufferIterPairQueue audioBufferIterPairQueue;
+		AudioBufferPtrPairQueue audioBufferPtrPairQueue;
 
 		template<typename iter>
 		float HarmonicProductSpectrum(iter first, iter last) const noexcept;
@@ -131,12 +131,12 @@ namespace winrt::Tuner::implementation
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
 	}
 
-	inline AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
+	inline AudioBufferPtrPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
 	{
 		// Checks if timing is correct
-		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
-		auto iters = audioBufferIterPairQueue.front();
-		audioBufferIterPairQueue.pop();
+		WINRT_ASSERT(!audioBufferPtrPairQueue.empty());
+		auto iters = audioBufferPtrPairQueue.front();
+		audioBufferPtrPairQueue.pop();
 		return iters;
 	}
 

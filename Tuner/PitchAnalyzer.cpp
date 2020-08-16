@@ -17,7 +17,7 @@ namespace winrt::Tuner::implementation
 		// Add buffers to queue
 		for (AudioBuffer& audioBuffer : audioBuffersArray) {
 			audioBuffer.resize(OUTPUT_SIGNAL_SIZE);
-			audioBufferIterPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
+			audioBufferPtrPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
 		}
 
 		filterCoeff.resize(OUTPUT_SIGNAL_SIZE);
@@ -142,7 +142,7 @@ namespace winrt::Tuner::implementation
 
 	}
 
-	void PitchAnalyzer::Analyze(const AudioBufferIteratorPair& audioBufferIters) noexcept
+	void PitchAnalyzer::Analyze(const AudioBufferPtrPair& audioBufferIters) noexcept
 	{
 		// SoundAnalyzed callback must be attached before performing analysis.
 		WINRT_ASSERT(soundAnalyzedCallback);
@@ -172,7 +172,7 @@ namespace winrt::Tuner::implementation
 			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
 		// Put iterator pair back in the queue
-		audioBufferIterPairQueue.push(audioBufferIters);
+		audioBufferPtrPairQueue.push(audioBufferIters);
 	}
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan() const noexcept

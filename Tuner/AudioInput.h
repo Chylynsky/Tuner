@@ -16,7 +16,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		using BufferFilledCallback = std::function<void(const AudioInput& sender, const AudioBufferIteratorPair& args)>;
+		using BufferFilledCallback = std::function<void(const AudioInput& sender, const AudioBufferPtrPair& args)>;
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;
@@ -26,7 +26,7 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 
-		AudioBufferIteratorPair audioBufferIters;
+		AudioBufferPtrPair audioBufferIters;
 		// Helper pointers
 		sample_t* first;
 		sample_t* last;
@@ -45,7 +45,7 @@ namespace winrt::Tuner::implementation
 		// Stop recording audio data
 		void Stop() const noexcept;
 
-		void AttachBuffer(const AudioBufferIteratorPair& audioBufferIters) noexcept;
+		void AttachBuffer(const AudioBufferPtrPair& audioBufferIters) noexcept;
 
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 
@@ -67,7 +67,7 @@ namespace winrt::Tuner::implementation
 		audioGraph.Stop();
 	}
 
-	inline void AudioInput::AttachBuffer(const std::pair<float*, float*>& audioBufferIters) noexcept
+	inline void AudioInput::AttachBuffer(const AudioBufferPtrPair& audioBufferIters) noexcept
 	{
 		this->audioBufferIters = audioBufferIters;
 		first = current = audioBufferIters.first;

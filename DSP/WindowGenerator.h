@@ -5,6 +5,13 @@ namespace DSP
 {
 	class WindowGenerator
 	{
+		template<typename _It>
+		static inline constexpr bool is_input_iterator = 
+			std::is_same_v<std::iterator_traits<_It>::iterator_category, std::input_iterator_tag> ||
+			std::is_same_v<std::iterator_traits<_It>::iterator_category, std::forward_iterator_tag> ||
+			std::is_same_v<std::iterator_traits<_It>::iterator_category, std::bidirectional_iterator_tag> ||
+			std::is_same_v<std::iterator_traits<_It>::iterator_category, std::random_access_iterator_tag>;
+
 		// Generate Gaussian window coefficients
 		template<typename _InIt>
 		static void GenerateGaussianWindow(_InIt first, const _InIt last) noexcept;
@@ -61,13 +68,13 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		constexpr value_t alpha{ static_cast<value_t>(2.5) };
 		const diff_t N = std::distance<_InIt>(first, last);
 		const value_t step = (static_cast<value_t>(N) - static_cast<value_t>(1)) / static_cast<value_t>(2);
 
-		for (value_t n = 0; first != last; first++, n++)) {
+		for (value_t n = 0; first != last; first++, n++) {
 			*(first) = std::exp(static_cast<value_t>(-0.5) * std::pow((alpha * n / step), 2));
 		}
 	}
@@ -78,7 +85,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		const diff_t N = std::distance<_InIt>(first, last);
 
@@ -93,7 +100,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		const diff_t N = std::distance<_InIt>(first, last);
 
@@ -108,7 +115,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		const diff_t N = std::distance<_InIt>(first, last);
 
@@ -123,7 +130,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator < _InIt>, "_InIt must be input iterator.");
 
 		constexpr value_t a0{ static_cast<value_t>(25) / static_cast<value_t>(46) };
 		constexpr value_t a1{ 1 - a0 };
@@ -141,7 +148,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		constexpr value_t a0{ static_cast<value_t>(7938) / static_cast<value_t>(18608) };
 		constexpr value_t a1{ static_cast<value_t>(9240) / static_cast<value_t>(18608) };
@@ -162,7 +169,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		constexpr value_t a0{ static_cast<value_t>(0.3635819) };
 		constexpr value_t a1{ static_cast<value_t>(0.4891775) };
@@ -185,7 +192,7 @@ namespace DSP
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
-		static_assert(std::is_same_v<std::iterator_traits<_InIt>::iterator_category, std::input_iterator_tag>, "_InIt must be input iterator.");
+		static_assert(is_input_iterator<_InIt>, "_InIt must be input iterator.");
 
 		constexpr value_t a0{ static_cast<value_t>(0.35875) };
 		constexpr value_t a1{ static_cast<value_t>(0.48829) };
@@ -203,7 +210,7 @@ namespace DSP
 	}
 
 	template<typename _InIt>
-	inline void WindowGenerator::Generate(WindowType type, _InIt first, const _InIt last) noexcept
+	inline void WindowGenerator::Generate(WindowGenerator::WindowType type, _InIt first, const _InIt last) noexcept
 	{
 		switch (type) {
 		case WindowType::Gauss:				WindowGenerator::GenerateGaussianWindow(first, last);			break;
