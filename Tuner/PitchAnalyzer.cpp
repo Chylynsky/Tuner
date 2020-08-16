@@ -149,7 +149,6 @@ namespace winrt::Tuner::implementation
 
 		// Get helper pointers
 		sample_t* audioBufferFirst			= audioBufferIters.first;
-		sample_t* outputSignalFirst			= outputSignal.data();
 		complex_t* filterFreqResponseFirst	= filterFreqResponse.data();
 		complex_t* fftResultFirst			= fftResult.data();
 		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;

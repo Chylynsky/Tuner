@@ -64,15 +64,13 @@ namespace winrt::Tuner::implementation
 		WINRT_ASSERT(byte);
 		
 		if (std::next(current, buffer.Length()) < last) {
-			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + buffer.Length()), current);
-			//std::memcpy(current, byte, buffer.Length());
-			std::advance(current, buffer.Length() / sizeof(float));
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
+			std::advance(current, buffer.Length() / sizeof(sample_t));
 		}
 		else {
 			auto distance = std::distance(current, last);
-			std::copy(reinterpret_cast<float*>(byte), reinterpret_cast<float*>(byte + distance), current);
-			//std::memcpy(current, byte, distance);
-			std::advance(current, distance / sizeof(float));
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
+			std::advance(current, distance / sizeof(sample_t));
 			bufferFilledCallback(*this, audioBufferIters);
 		}
 	}
@@ -86,6 +84,5 @@ namespace winrt::Tuner::implementation
 		first{ nullptr },
 		current{ nullptr },
 		last{ nullptr }
-	{
-	}
+	{}
 }

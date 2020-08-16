@@ -2,20 +2,20 @@
 
 namespace DSP
 {
-	template<typename value_t>
-	constexpr value_t pi{ static_cast<value_t>(3.141592653589793) };
+	template<typename T>
+	inline constexpr T pi{ static_cast<T>(3.141592653589793238462643383279502884197169L) };
 
 	// Sinc function
-	template<typename T1>
-	inline T1 sinc(T1 val) noexcept
+	template<typename T>
+	inline T sinc(T val) noexcept
 	{
-		return (val == static_cast<T1>(0)) ? static_cast<T1>(1) : std::sin(val) / val;
+		return (val == static_cast<T>(0)) ? static_cast<T>(1) : std::sin(val) / val;
 	}
 
 	// Convert frequency to normalized omega (radians/sample)
-	template<typename T1>
-	inline T1 omega_norm(T1 f, T1 fs) noexcept
+	template<typename T>
+	inline T omega_norm(T f, T fs) noexcept
 	{
-		return static_cast<T1>(2) * pi<T1> * f / fs;
+		return static_cast<T>(2) * pi<T> * f / fs;
 	}
 }

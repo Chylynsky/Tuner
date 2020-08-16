@@ -7,5 +7,17 @@
 #endif
 
 #include <windows.h>
+
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
+
 #include <iterator>
 #include <cmath>
+#include <type_traits>
+#include <limits>
+#include <cstdint>

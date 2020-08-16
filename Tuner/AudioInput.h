@@ -1,4 +1,5 @@
 #pragma once
+#include "TypeAliases.h"
 
 namespace winrt::Tuner::implementation
 {
@@ -15,7 +16,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		using BufferFilledCallback = std::function<void(const AudioInput& sender, const std::pair<float*, float*>& args)>;
+		using BufferFilledCallback = std::function<void(const AudioInput& sender, const AudioBufferIteratorPair& args)>;
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;
@@ -25,11 +26,11 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 
-		std::pair<float*, float*> audioBufferIters;
+		AudioBufferIteratorPair audioBufferIters;
 		// Helper pointers
-		float* first;
-		float* last;
-		float* current;
+		sample_t* first;
+		sample_t* last;
+		sample_t* current;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 
@@ -44,7 +45,7 @@ namespace winrt::Tuner::implementation
 		// Stop recording audio data
 		void Stop() const noexcept;
 
-		void AttachBuffer(const std::pair<float*, float*>& audioBufferIters) noexcept;
+		void AttachBuffer(const AudioBufferIteratorPair& audioBufferIters) noexcept;
 
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 

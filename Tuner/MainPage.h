@@ -2,6 +2,7 @@
 #include "MainPage.g.h"
 #include "PitchAnalyzer.h"
 #include "ErrorPage.h"
+#include "TypeAliases.h"
 
 namespace winrt::Tuner::implementation
 {
@@ -39,7 +40,7 @@ namespace winrt::Tuner::implementation
         winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         std::future<InitializationStatus> InitializeFunctionality();
         winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float frequency, float cents);
-        void AudioInput_BufferFilled(const AudioInput& sender, const std::pair<float*, float*>& args) noexcept;
+        void AudioInput_BufferFilled(const AudioInput& sender, const AudioBufferIteratorPair& args) noexcept;
         winrt::Windows::Foundation::IAsyncAction SetStateAsync(MainPageState state);
         void ColorForeground(int indexMin, int indexMax, const winrt::Windows::UI::Xaml::Media::SolidColorBrush& color);
     };

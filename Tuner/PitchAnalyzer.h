@@ -1,6 +1,7 @@
 #pragma once
 #include "AudioInput.h"
 #include "FilterGenerator.h"
+#include "TypeAliases.h"
 
 // Enable/disable Matlab code generation
 // If defined, debugging will stop on every 
@@ -24,10 +25,7 @@ namespace winrt::Tuner::implementation
 	{
 	public:
 		// Type aliases
-		using sample_t					= float;
-		using complex_t					= std::complex<sample_t>;
 		using AudioBuffer				= std::vector<sample_t>;
-		using AudioBufferIteratorPair	= std::pair<sample_t*, sample_t*>;
 		using FFTResultBuffer			= std::vector<complex_t>;
 		using NoteFrequenciesMap		= std::map<sample_t, std::string>;
 		using AudioBufferArray			= std::array<AudioBuffer, 2>;
@@ -133,7 +131,7 @@ namespace winrt::Tuner::implementation
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
 	}
 
-	inline PitchAnalyzer::AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
+	inline AudioBufferIteratorPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
 	{
 		// Checks if timing is correct
 		WINRT_ASSERT(!audioBufferIterPairQueue.empty());
