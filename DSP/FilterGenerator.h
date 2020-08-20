@@ -4,11 +4,11 @@
 
 namespace DSP
 {
-	template<typename T, typename T2, typename iter>
-	void GenerateBandPassFIR(T fc1, T fc2, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	template<typename T, typename T2, typename _InIt>
+	void GenerateBandPassFIR(T fc1, T fc2, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
-		using value_t = typename std::iterator_traits<iter>::value_type;
-		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		using value_t = typename std::iterator_traits<_InIt>::value_type;
+		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		// Pre-calculate formula for normalized angular frequency
@@ -26,11 +26,11 @@ namespace DSP
 		}
 	}
 
-	template<typename T, typename T2, typename iter>
-	void GenerateLowPassFIR(T fc, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	template<typename T, typename T2, typename _InIt>
+	void GenerateLowPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
-		using value_t = typename std::iterator_traits<iter>::value_type;
-		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		using value_t = typename std::iterator_traits<_InIt>::value_type;
+		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		// Pre-calculate formula for normalized angular frequency
@@ -46,11 +46,11 @@ namespace DSP
 		}
 	}
 
-	template<typename T, typename T2, typename iter>
-	void GenerateHighPassFIR(T fc, T2 samplingFreq, iter first, const iter last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	template<typename T, typename T2, typename _InIt>
+	void GenerateHighPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
 	{
-		using value_t = typename std::iterator_traits<iter>::value_type;
-		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		using value_t = typename std::iterator_traits<_InIt>::value_type;
+		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 		static_assert(std::is_floating_point<value_t>(), "value_t must be of a floating point type.");
 
 		// Pre-calculate formula for normalized angular frequency

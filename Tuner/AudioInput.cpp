@@ -16,9 +16,8 @@ namespace winrt::Tuner::implementation
 	// Get an instance of AudioInput class
 	std::future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
 	{
-		audioSettings = AudioGraphSettings(AudioRenderCategory::Other);
 		// Start async operation that creates new audio graph
-		CreateAudioGraphResult graphCreation{ co_await AudioGraph::CreateAsync(audioSettings) };
+		CreateAudioGraphResult graphCreation = co_await AudioGraph::CreateAsync(audioSettings);
 
 		// Check if succesfully created
 		if (graphCreation.Status() != AudioGraphCreationStatus::Success) {
@@ -32,7 +31,7 @@ namespace winrt::Tuner::implementation
 			// Attach callback
 			audioGraph.QuantumStarted({ this, &AudioInput::audioGraph_QuantumStarted });
 			// Start audio input device node creation
-			CreateAudioDeviceInputNodeResult nodeCreation{ co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media) };
+			CreateAudioDeviceInputNodeResult nodeCreation = co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media);
 
 			// Check if succesful
 			if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success) {
@@ -50,7 +49,6 @@ namespace winrt::Tuner::implementation
 	// Handle QuantumStarted event
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
-		static std::future<void> fut;
 		AudioFrame frame = frameOutputNode.GetFrame();
 		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
@@ -72,14 +70,8 @@ namespace winrt::Tuner::implementation
 			auto distance = last - current;
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
 			current += buffer.Length() / sizeof(sample_t);
-			
-			if (fut.valid())
-			{
-				fut.wait(); // In case previous call hasn't returned
-			}
-			
-			fut = std::async(std::launch::async, [=]() { bufferFilledCallback(*this, first, last); });
 
+			RunCallbackAsync(first, current);
 			SwapBuffers();
 		}
 	}
@@ -96,18 +88,28 @@ namespace winrt::Tuner::implementation
 	AudioInput::AudioInput() : 
 		bufferFilledCallback{ nullptr },
 		audioGraph{ nullptr }, 
-		audioSettings{ nullptr }, 
+		audioSettings{ nullptr },
 		inputDevice{ nullptr }, 
 		frameOutputNode{ nullptr }
 	{
-		for (uint32_t i = 0; i < sampleBuffers.size(); i++)
+		for (SampleBuffer& buffer : sampleBufferArray)
 		{
-			sampleBufferQueue.push(sampleBuffers.data() + i);
+			sampleBufferQueue.push(&buffer);
+
+			/*
+				Push placeholder std::futures for async callback execution
+				for each sample buffer.
+			*/
+			asyncCallbackQueue.push(std::future<void>());
 		}
 
 		sampleBufferPtr = sampleBufferQueue.front();
 		sampleBufferQueue.pop();
 		first = current = sampleBufferPtr->data();
 		last = first + sampleBufferPtr->size();
+
+		// Fill audio settings
+		audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
+		audioSettings.DesiredRenderDeviceAudioProcessing(AudioProcessing::Raw);
 	}
 }

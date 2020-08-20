@@ -7,7 +7,9 @@ using namespace winrt::Windows::Foundation;
 
 namespace winrt::Tuner::implementation
 {
-	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
+	const PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::noteFrequencies{ InitializeNoteFrequenciesMap() };
+
+	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }, samplingFrequency{ 44100.0f }
 	{
 	}
 
@@ -39,7 +41,7 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() const noexcept
+	PitchAnalyzer::NoteFrequenciesMap PitchAnalyzer::InitializeNoteFrequenciesMap() noexcept
 	{
 		// Constant needed for note frequencies calculation
 		const float a{ pow(2.0f, 1.0f / 12.0f) };
@@ -146,7 +148,7 @@ namespace winrt::Tuner::implementation
 		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());
 
 #ifdef CREATE_MATLAB_PLOTS
-		ExportSoundAnalysisMatlab(audioBufferFirst, fftResultFirst).get();
+		ExportSoundAnalysisMatlab(first, fftResultFirst).get();
 		// Pause debugging, Matlab .m files are now ready
 		__debugbreak();
 #endif

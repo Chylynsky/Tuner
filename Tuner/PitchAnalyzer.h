@@ -6,6 +6,7 @@
 // Enable/disable Matlab code generation
 // If defined, debugging will stop on every 
 // sound analysis performed
+
 //#define CREATE_MATLAB_PLOTS
 
 #if defined NDEBUG && defined CREATE_MATLAB_PLOTS
@@ -24,19 +25,6 @@ namespace winrt::Tuner::implementation
 	class PitchAnalyzer
 	{
 	public:
-		// Type aliases
-		template <uint32_t size> 
-		using FFTResultBuffer		= std::array<complex_t, size>;
-		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
-		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
-
-		// Struct holding the result of each, returned from GetNote() function.
-		struct PitchAnalysisResult
-		{
-			const std::string& note;
-			const float cents;
-		};
-
 		static constexpr uint32_t FILTER_SIZE{ 1 << 12 };
 		static constexpr uint32_t OUTPUT_SIGNAL_SIZE{ AUDIO_BUFFER_SIZE + FILTER_SIZE - 1U };
 		static constexpr uint32_t FFT_RESULT_SIZE{ OUTPUT_SIGNAL_SIZE / 2U + 1U };
@@ -47,7 +35,18 @@ namespace winrt::Tuner::implementation
 		// A4 base note frequency
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
-		float samplingFrequency{ 44100.0f };
+		// Type aliases
+		using SampleBuffer			= SampleBuffer<OUTPUT_SIGNAL_SIZE>;
+		using FFTResultBuffer		= std::array<complex_t, FFT_RESULT_SIZE>;
+		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
+		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
+
+		// Struct holding the result of each, returned from GetNote() function.
+		struct PitchAnalysisResult
+		{
+			const std::string& note;
+			const float cents;
+		};
 
 		PitchAnalyzer();
 		~PitchAnalyzer();
@@ -69,30 +68,32 @@ namespace winrt::Tuner::implementation
 
 	private:
 
+		// Frequencies and notes that represents them are stored in std::map<float, std::string>
+		static const NoteFrequenciesMap noteFrequencies;
+
 		// Event handlers
 		SoundAnalyzedCallback soundAnalyzedCallback;
 
 		fftwf_plan fftPlan;
-		FFTResultBuffer<FFT_RESULT_SIZE> fftResult;
-
-		// Frequencies and notes that represents them are stored in std::map<float, std::string>
-		const NoteFrequenciesMap noteFrequencies{ InitializeNoteFrequenciesMap() };
+		FFTResultBuffer fftResult;
 
 		// FIR filter parameters
-		SampleBuffer<OUTPUT_SIGNAL_SIZE> filterCoeff;
-		FFTResultBuffer<FFT_RESULT_SIZE> filterFreqResponse;
+		SampleBuffer filterCoeff;
+		FFTResultBuffer filterFreqResponse;
 		
 		// Convolution result
-		SampleBuffer<OUTPUT_SIGNAL_SIZE> outputSignal;
+		SampleBuffer outputSignal;
 
-		template<typename iter>
-		float HarmonicProductSpectrum(iter first, iter last) const noexcept;
+		float samplingFrequency;
+
+		template<typename _InIt>
+		float HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept;
 
 		// Analyzes input frequency and returns a filled PitchAnalysisResult struct
 		PitchAnalysisResult GetNote(float frequency) const noexcept;
 
 		// Function used for filling the noteFrequencies std::map
-		NoteFrequenciesMap InitializeNoteFrequenciesMap() const noexcept;
+		static NoteFrequenciesMap InitializeNoteFrequenciesMap() noexcept;
 
 		// Save fftwf_plan to LocalState folder via FFTW Wisdom
 		winrt::Windows::Foundation::IAsyncAction SaveFFTPlan() const noexcept;
@@ -120,33 +121,35 @@ namespace winrt::Tuner::implementation
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
 	}
 
-	template<typename iter>
-	float PitchAnalyzer::HarmonicProductSpectrum(iter first, iter last) const noexcept
+	template<typename _InIt>
+	float PitchAnalyzer::HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept
 	{
-		WINRT_ASSERT(std::distance<iter>(first, last) > 0);
-		using diff_t = typename std::iterator_traits<iter>::difference_type;
+		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 
 		// Number of samples
-		static const diff_t N{ std::distance<iter>(first, last) };
+		static const diff_t N = last - first;
+		WINRT_ASSERT(N > 0);
+
 		// Iterator to the upper frequency boundary
-		static const iter maxFreqIter{ std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency))) };
+		static const _InIt maxFreqIter = first + static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency));
 		WINRT_ASSERT(maxFreqIter <= last);
 
 		std::pair<float, float> highestSumIndex{ 0.0, 0.0 };
 		std::pair<float, float> currentSumIndex{ 0.0, 0.0 };
 
 		// Index of the sample representing lower frequency bound
-		diff_t n{ static_cast<diff_t>(MIN_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency) };
+		diff_t n = static_cast<diff_t>(MIN_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency);
 
-		for (; std::next(first, n) < maxFreqIter; n++) {
+		for (; first +  n < maxFreqIter; n++) {
 			currentSumIndex = std::make_pair(
-				std::abs(*std::next(first, n)) *
-				((2 * n <= N) ? std::abs(*std::next(first, 2 * n)) : 0) *
-				((3 * n <= N) ? std::abs(*std::next(first, 3 * n)) : 0), n);
+				std::abs(*(first + n)) *
+				((2 * n <= N) ? std::abs(*(first + 2 * n)) : 0) *
+				((3 * n <= N) ? std::abs(*(first + 3 * n)) : 0), n);
 			if (currentSumIndex.first > highestSumIndex.first) {
 				highestSumIndex = currentSumIndex;
 			}
 		}
+
 		return highestSumIndex.second * static_cast<diff_t>(samplingFrequency) / N;
 	}
 }

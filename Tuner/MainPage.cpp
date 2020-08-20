@@ -70,7 +70,9 @@ namespace winrt::Tuner::implementation
 			co_return InitializationStatus::Failure;
 		}
 
+		// Sampling frequency must be set before performing any analysis
 		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
+		// Set sound analyzed callback
 		pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
 			SoundAnalyzed_Callback(note, frequency, cents); 
 		});
@@ -78,10 +80,10 @@ namespace winrt::Tuner::implementation
 		co_await pitchAnalyzer.InitializeAsync();
 
 		// Attach callback function
-		audioInput.BufferFilled([&](const AudioInput& sender, sample_t* first, sample_t* last) {
-			// Run harmonic analysis
+		audioInput.BufferFilled([this](sample_t* first, sample_t* last) {
 			pitchAnalyzer.Analyze(first, last);
 		});
+
 		audioInput.Start();
 
 		co_return InitializationStatus::Success;
@@ -99,10 +101,10 @@ namespace winrt::Tuner::implementation
 			ColorForeground(6, 6, Color::Green());
 		}
 		// Notes above the desired frequency
-		else if (cents > 2.0f && cents <= 5.0f) {
+		else if (cents > 2.0f && cents <= 4.0f) {
 			ColorForeground(6, 7, Color::Green());
 		}
-		else if (cents > 5.0f && cents <= 10.0f) {
+		else if (cents > 4.0f && cents <= 10.0f) {
 			ColorForeground(6, 8, Color::Orange());
 		}
 		else if (cents > 10.0f && cents <= 15.0f) {
@@ -120,6 +122,7 @@ namespace winrt::Tuner::implementation
 		else if (cents > 700.0f && cents <= 1200.0f) {
 			ColorForeground(6, 12, Color::Red());
 		}
+
 		// Notes below the desired frequency
 		else if (cents < -2.0f && cents >= -5.0f) {
 			ColorForeground(5, 6, Color::Green());
