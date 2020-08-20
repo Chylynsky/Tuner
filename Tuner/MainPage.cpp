@@ -70,15 +70,18 @@ namespace winrt::Tuner::implementation
 			co_return InitializationStatus::Failure;
 		}
 
-		pitchAnalyzer.SoundAnalyzed(bind(&MainPage::SoundAnalyzed_Callback, this, _1, _2, _3));
 		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
+		pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
+			SoundAnalyzed_Callback(note, frequency, cents); 
+		});
 
 		co_await pitchAnalyzer.InitializeAsync();
 
-		// Get first buffer from queue and attach it to AudioInput class object
-		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
 		// Attach callback function
-		audioInput.BufferFilled(bind(&MainPage::AudioInput_BufferFilled, this, _1, _2));
+		audioInput.BufferFilled([&](const AudioInput& sender, sample_t* first, sample_t* last) {
+			// Run harmonic analysis
+			pitchAnalyzer.Analyze(first, last);
+		});
 		audioInput.Start();
 
 		co_return InitializationStatus::Success;
@@ -139,14 +142,6 @@ namespace winrt::Tuner::implementation
 		else if (cents < -900.0f && cents >= -1200.0f) {
 			ColorForeground(0, 6, Color::Red());
 		}
-	}
-
-	void MainPage::AudioInput_BufferFilled(const AudioInput& sender, const AudioBufferPtrPair& args) noexcept
-	{
-		// Attach new buffer
-		audioInput.AttachBuffer(pitchAnalyzer.GetNextAudioBufferIters());
-		// Run harmonic analysis
-		pitchAnalyzer.Analyze(args);
 	}
 
 	IAsyncAction MainPage::SetStateAsync(MainPageState state)

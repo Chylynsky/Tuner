@@ -16,7 +16,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		using BufferFilledCallback = std::function<void(const AudioInput& sender, const AudioBufferPtrPair& args)>;
+		using BufferFilledCallback = std::function<void(const AudioInput& sender, sample_t* first, sample_t* last)>;
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;
@@ -26,7 +26,7 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 
-		AudioBufferPtrPair audioBufferIters;
+		SampleBuffer<AUDIO_BUFFER_SIZE> sampleBuffer;
 		// Helper pointers
 		sample_t* first;
 		sample_t* last;
@@ -44,8 +44,6 @@ namespace winrt::Tuner::implementation
 		void Start() const noexcept;
 		// Stop recording audio data
 		void Stop() const noexcept;
-
-		void AttachBuffer(const AudioBufferPtrPair& audioBufferIters) noexcept;
 
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 
@@ -65,13 +63,6 @@ namespace winrt::Tuner::implementation
 	inline void AudioInput::Stop() const noexcept
 	{
 		audioGraph.Stop();
-	}
-
-	inline void AudioInput::AttachBuffer(const AudioBufferPtrPair& audioBufferIters) noexcept
-	{
-		this->audioBufferIters = audioBufferIters;
-		first = current = audioBufferIters.first;
-		last = audioBufferIters.second;
 	}
 
 	inline void AudioInput::BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept

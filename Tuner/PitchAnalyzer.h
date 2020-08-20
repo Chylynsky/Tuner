@@ -25,12 +25,10 @@ namespace winrt::Tuner::implementation
 	{
 	public:
 		// Type aliases
-		using AudioBuffer				= std::vector<sample_t>;
-		using FFTResultBuffer			= std::vector<complex_t>;
-		using NoteFrequenciesMap		= std::map<sample_t, std::string>;
-		using AudioBufferArray			= std::array<AudioBuffer, 2>;
-		using AudioBufferPtrPairQueue	= std::queue<AudioBufferPtrPair>;
-		using SoundAnalyzedCallback		= std::function<void(const std::string& note, float frequency, float cents)>;
+		template <uint32_t size> 
+		using FFTResultBuffer		= std::array<complex_t, size>;
+		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
+		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
 
 		// Struct holding the result of each, returned from GetNote() function.
 		struct PitchAnalysisResult
@@ -39,7 +37,6 @@ namespace winrt::Tuner::implementation
 			const float cents;
 		};
 
-		static constexpr uint32_t AUDIO_BUFFER_SIZE{ 1 << 16 };
 		static constexpr uint32_t FILTER_SIZE{ 1 << 12 };
 		static constexpr uint32_t OUTPUT_SIGNAL_SIZE{ AUDIO_BUFFER_SIZE + FILTER_SIZE - 1U };
 		static constexpr uint32_t FFT_RESULT_SIZE{ OUTPUT_SIGNAL_SIZE / 2U + 1U };
@@ -66,12 +63,9 @@ namespace winrt::Tuner::implementation
 		// Deduce the best performant FFT algorithm or, if possible, load it from file
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync() noexcept;
 
-		// Returns std::pair of pointers to available audio buffer <first; last)
-		AudioBufferPtrPair GetNextAudioBufferIters() noexcept;
-
 		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
 		// for each analysis performed.
-		void Analyze(const AudioBufferPtrPair& audioBufferIters) noexcept;
+		void Analyze(sample_t* first, sample_t* last) noexcept;
 
 	private:
 
@@ -79,22 +73,17 @@ namespace winrt::Tuner::implementation
 		SoundAnalyzedCallback soundAnalyzedCallback;
 
 		fftwf_plan fftPlan;
-		FFTResultBuffer fftResult;
+		FFTResultBuffer<FFT_RESULT_SIZE> fftResult;
 
 		// Frequencies and notes that represents them are stored in std::map<float, std::string>
 		const NoteFrequenciesMap noteFrequencies{ InitializeNoteFrequenciesMap() };
 
 		// FIR filter parameters
-		AudioBuffer filterCoeff;
-		FFTResultBuffer filterFreqResponse;
+		SampleBuffer<OUTPUT_SIGNAL_SIZE> filterCoeff;
+		FFTResultBuffer<FFT_RESULT_SIZE> filterFreqResponse;
 		
 		// Convolution result
-		AudioBuffer outputSignal;
-		
-		// Array of buffers that hold recorded samples
-		AudioBufferArray audioBuffersArray;
-		// Queue of available buffers
-		AudioBufferPtrPairQueue audioBufferPtrPairQueue;
+		SampleBuffer<OUTPUT_SIGNAL_SIZE> outputSignal;
 
 		template<typename iter>
 		float HarmonicProductSpectrum(iter first, iter last) const noexcept;
@@ -129,15 +118,6 @@ namespace winrt::Tuner::implementation
 	{
 		WINRT_ASSERT(soundAnalyzedCallback);
 		this->soundAnalyzedCallback = soundAnalyzedCallback;
-	}
-
-	inline AudioBufferPtrPair PitchAnalyzer::GetNextAudioBufferIters() noexcept
-	{
-		// Checks if timing is correct
-		WINRT_ASSERT(!audioBufferPtrPairQueue.empty());
-		auto iters = audioBufferPtrPairQueue.front();
-		audioBufferPtrPairQueue.pop();
-		return iters;
 	}
 
 	template<typename iter>

@@ -9,21 +9,6 @@ namespace winrt::Tuner::implementation
 {
 	PitchAnalyzer::PitchAnalyzer() : fftPlan{ nullptr }
 	{
-		/*
-			All vectors holding real values are resized to OUTPUT_SIGNAL_SIZE,
-			which results in zero padding.
-		*/
-
-		// Add buffers to queue
-		for (AudioBuffer& audioBuffer : audioBuffersArray) {
-			audioBuffer.resize(OUTPUT_SIGNAL_SIZE);
-			audioBufferPtrPairQueue.push(std::make_pair(audioBuffer.data(), audioBuffer.data() + AUDIO_BUFFER_SIZE));
-		}
-
-		filterCoeff.resize(OUTPUT_SIGNAL_SIZE);
-		outputSignal.resize(OUTPUT_SIGNAL_SIZE);
-		filterFreqResponse.resize(FFT_RESULT_SIZE);
-		fftResult.resize(FFT_RESULT_SIZE);
 	}
 
 	PitchAnalyzer::~PitchAnalyzer()
@@ -125,13 +110,15 @@ namespace winrt::Tuner::implementation
 				FFTW_WISDOM_ONLY);
 		}
 
+		WINRT_ASSERT(fftPlan);
+
 		// Generate filter coefficients
 		DSP::GenerateBandPassFIR(
 			MIN_FREQUENCY,
 			MAX_FREQUENCY,
 			samplingFrequency,
 			filterCoeff.begin(),
-			std::next(filterCoeff.begin(), FILTER_SIZE),
+			filterCoeff.begin() + FILTER_SIZE,
 			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
 		fftwf_execute(fftPlan);
@@ -142,19 +129,18 @@ namespace winrt::Tuner::implementation
 
 	}
 
-	void PitchAnalyzer::Analyze(const AudioBufferPtrPair& audioBufferIters) noexcept
+	void PitchAnalyzer::Analyze(sample_t* first, sample_t* last) noexcept
 	{
 		// SoundAnalyzed callback must be attached before performing analysis.
 		WINRT_ASSERT(soundAnalyzedCallback);
 
 		// Get helper pointers
-		sample_t* audioBufferFirst			= audioBufferIters.first;
 		complex_t* filterFreqResponseFirst	= filterFreqResponse.data();
 		complex_t* fftResultFirst			= fftResult.data();
 		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;
 
 		// Execute FFT on the input signal
-		fftwf_execute_dft_r2c(fftPlan, audioBufferFirst, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+		fftwf_execute_dft_r2c(fftPlan, first, reinterpret_cast<fftwf_complex*>(fftResultFirst));
 		// Apply FIR filter to the input signal
 		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());
 
@@ -171,8 +157,6 @@ namespace winrt::Tuner::implementation
 			PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
 			soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 		}
-		// Put iterator pair back in the queue
-		audioBufferPtrPairQueue.push(audioBufferIters);
 	}
 
 	winrt::Windows::Foundation::IAsyncAction PitchAnalyzer::SaveFFTPlan() const noexcept
