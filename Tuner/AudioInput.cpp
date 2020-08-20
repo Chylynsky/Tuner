@@ -50,6 +50,7 @@ namespace winrt::Tuner::implementation
 	// Handle QuantumStarted event
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
+		static std::future<void> fut;
 		AudioFrame frame = frameOutputNode.GetFrame();
 		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
@@ -65,17 +66,31 @@ namespace winrt::Tuner::implementation
 		
 		if (current + buffer.Length() < last) {
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
-			std::advance(current, buffer.Length() / sizeof(sample_t));
-			bufferFilledCallback(*this, first, current);
+			current += buffer.Length() / sizeof(sample_t);
 		}
 		else {
-			auto distance = std::distance(current, last);
+			auto distance = last - current;
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
-			std::advance(current, distance / sizeof(sample_t));
-			bufferFilledCallback(*this, first, current);
-			sampleBuffer.fill(0.0f);
-			first = current = sampleBuffer.data();
+			current += buffer.Length() / sizeof(sample_t);
+			
+			if (fut.valid())
+			{
+				fut.wait(); // In case previous call hasn't returned
+			}
+			
+			fut = std::async(std::launch::async, [=]() { bufferFilledCallback(*this, first, last); });
+
+			SwapBuffers();
 		}
+	}
+
+	void AudioInput::SwapBuffers()
+	{
+		sampleBufferQueue.push(sampleBufferPtr);
+		sampleBufferPtr = sampleBufferQueue.front();
+		sampleBufferQueue.pop();
+		first = current = sampleBufferPtr->data();
+		last = first + sampleBufferPtr->size();
 	}
 
 	AudioInput::AudioInput() : 
@@ -83,9 +98,16 @@ namespace winrt::Tuner::implementation
 		audioGraph{ nullptr }, 
 		audioSettings{ nullptr }, 
 		inputDevice{ nullptr }, 
-		frameOutputNode{ nullptr }, 
-		first{ sampleBuffer.data() },
-		current{ first },
-		last{ first + sampleBuffer.size() }
-	{}
+		frameOutputNode{ nullptr }
+	{
+		for (uint32_t i = 0; i < sampleBuffers.size(); i++)
+		{
+			sampleBufferQueue.push(sampleBuffers.data() + i);
+		}
+
+		sampleBufferPtr = sampleBufferQueue.front();
+		sampleBufferQueue.pop();
+		first = current = sampleBufferPtr->data();
+		last = first + sampleBufferPtr->size();
+	}
 }

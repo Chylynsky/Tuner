@@ -110,6 +110,7 @@ namespace winrt::Tuner::implementation
 				FFTW_WISDOM_ONLY);
 		}
 
+		// FFTW plan should be valid at this point
 		WINRT_ASSERT(fftPlan);
 
 		// Generate filter coefficients

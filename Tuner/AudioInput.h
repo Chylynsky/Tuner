@@ -26,13 +26,17 @@ namespace winrt::Tuner::implementation
 		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
 		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
 
-		SampleBuffer<AUDIO_BUFFER_SIZE> sampleBuffer;
+		SampleBufferArray<AUDIO_BUFFER_SIZE, 2> sampleBuffers;
+		SampleBufferQueue<AUDIO_BUFFER_SIZE> sampleBufferQueue;
+		SampleBuffer<AUDIO_BUFFER_SIZE>* sampleBufferPtr;
+
 		// Helper pointers
 		sample_t* first;
 		sample_t* last;
 		sample_t* current;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
+		void SwapBuffers();
 
 	public:
 
