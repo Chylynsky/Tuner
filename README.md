@@ -45,3 +45,6 @@ Filtered signal closeup:
 
 ## Author
 * **Borys Chyliński** - [Chylynsky](https://github.com/Chylynsky)
+
+## Credits
+* Icons made by [Freepik](https://www.flaticon.com/authors/freepik) from [Flaticon](https://www.flaticon.com/)
