@@ -24,20 +24,23 @@ namespace winrt::Tuner::implementation
 	PitchAnalyzer::PitchAnalysisResult PitchAnalyzer::GetNote(float frequency) const noexcept
 	{
 		// Get the nearest note above or equal
-		auto high{ noteFrequencies.lower_bound(frequency) };
+		auto high = noteFrequencies.lower_bound(frequency);
 		// Get the nearest note below
-		auto low{ std::prev(high) };
+		auto low = std::prev(high);
 
-		WINRT_ASSERT(*high <= *(std::prev(noteFrequencies.end())) && *high > * (noteFrequencies.begin()));
+		// Get differences between current frequency and the nearest "valid" tones
+		float highDiff = (*high).first - frequency;
+		float lowDiff = frequency - (*low).first;
 
-		float highDiff{ (*high).first - frequency };
-		float lowDiff{ frequency - (*low).first };
+		//auto x = 1200.0f * std::log2((*high).first / ((*low).first + ((*high).first - (*low).first) / 2.0f));
 
-		if (highDiff < lowDiff) {
-			return { (*high).second, 1200.0f * std::log2((*high).first / frequency) };
+		if (highDiff < lowDiff) 
+		{
+			return { (*high).second, 1200.0f * std::log2(frequency / (*high).first) };
 		}
-		else {
-			return { (*low).second, 1200.0f * std::log2((*low).first / frequency) };
+		else 
+		{
+			return { (*low).second, 1200.0f * std::log2(frequency / (*low).first) };
 		}
 	}
 
@@ -54,7 +57,7 @@ namespace winrt::Tuner::implementation
 		int halfSteps{ 0 };
 		NoteFrequenciesMap result;
 
-		// Fill a map for notes below and equal AA
+		// Fill a map for notes below  A4
 		while (currentFrequency >= MIN_FREQUENCY) {
 			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
@@ -65,15 +68,15 @@ namespace winrt::Tuner::implementation
 				currentOctave--;
 			}
 
-			octaveIter--;
+			octaveIter = std::prev(octaveIter, 1);
 		}
 
 		// Set iterator to one half-step above A4
-		octaveIter = baseNoteIter + 1;
+		octaveIter = std::next(baseNoteIter, 1);
 		halfSteps = 1;
 		currentOctave = 4;
 
-		// Fill a map for notes below and equal AA
+		// Fill a map for notes above and equal A4
 		while (currentFrequency <= MAX_FREQUENCY) {
 
 			if (octaveIter == octave.end()) {
@@ -84,7 +87,7 @@ namespace winrt::Tuner::implementation
 			currentFrequency = BASE_NOTE_FREQUENCY * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps++;
-			octaveIter++;
+			std::advance(octaveIter, 1);
 		}
 
 		return result;
@@ -100,7 +103,7 @@ namespace winrt::Tuner::implementation
 				FFT_RESULT_SIZE,
 				filterCoeff.data(),
 				reinterpret_cast<fftwf_complex*>(filterFreqResponse.data()),
-				FFTW_PATIENT);
+				FFTW_MEASURE);
 			// Save created file
 			co_await SaveFFTPlan();
 		}
@@ -121,7 +124,7 @@ namespace winrt::Tuner::implementation
 			MAX_FREQUENCY,
 			samplingFrequency,
 			filterCoeff.begin(),
-			filterCoeff.begin() + FILTER_SIZE,
+			std::next(filterCoeff.begin(), FILTER_SIZE),
 			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
 		fftwf_execute(fftPlan);

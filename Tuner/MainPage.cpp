@@ -89,6 +89,9 @@ namespace winrt::Tuner::implementation
 		co_return InitializationStatus::Success;
 	}
 
+	/*
+	*	Function serves as a callback to the PitchAnalyzer objects' SoundAnalyzed event.
+	*/
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
 		co_await resume_foreground(TuningScreen().Dispatcher());
@@ -100,8 +103,9 @@ namespace winrt::Tuner::implementation
 		if (cents <= 2.0f && cents >= -2.0f) {
 			ColorForeground(6, 6, Color::Green());
 		}
+
 		// Notes above the desired frequency
-		else if (cents > 2.0f && cents <= 4.0f) {
+		else if (cents > 2.0f && cents <= 5.0f) {
 			ColorForeground(6, 7, Color::Green());
 		}
 		else if (cents > 4.0f && cents <= 10.0f) {
@@ -110,16 +114,16 @@ namespace winrt::Tuner::implementation
 		else if (cents > 10.0f && cents <= 15.0f) {
 			ColorForeground(6, 9, Color::Orange());
 		}
-		else if (cents > 15.0f && cents <= 300.0f) {
-			ColorForeground(6, 9, Color::Red());
+		else if (cents > 15.0f && cents <= 20.0f) {
+			ColorForeground(6, 9, Color::Orange());
 		}
-		else if (cents > 300.0f && cents <= 600.0f) {
+		else if (cents > 20.0f && cents <= 30.0f) {
 			ColorForeground(6, 10, Color::Red());
 		}
-		else if (cents > 600.0f && cents <= 700.0f) {
+		else if (cents > 30.0f && cents <= 40.0f) {
 			ColorForeground(6, 11, Color::Red());
 		}
-		else if (cents > 700.0f && cents <= 1200.0f) {
+		else if (cents > 40.0f) {
 			ColorForeground(6, 12, Color::Red());
 		}
 
@@ -133,20 +137,23 @@ namespace winrt::Tuner::implementation
 		else if (cents < -10.0f && cents >= -15.0f) {
 			ColorForeground(3, 6, Color::Orange());
 		}
-		else if (cents < -15.0f && cents >= -300.0f) {
-			ColorForeground(3, 6, Color::Red());
+		else if (cents < -15.0f && cents >= -20.0f) {
+			ColorForeground(3, 6, Color::Orange());
 		}
-		else if (cents < -300.0f && cents >= -600.0f) {
+		else if (cents < -20.0f && cents >= -30.0f) {
 			ColorForeground(2, 6, Color::Red()); 
 		}
-		else if (cents < -600.0f && cents >= -900.0f) {
+		else if (cents < -30.0f && cents >= -40.0f) {
 			ColorForeground(1, 6, Color::Red());
 		}
-		else if (cents < -900.0f && cents >= -1200.0f) {
+		else if (cents < -40.0f) {
 			ColorForeground(0, 6, Color::Red());
 		}
 	}
 
+	/*
+	*	Set currently visible page depending on the current application state.
+	*/
 	IAsyncAction MainPage::SetStateAsync(MainPageState state)
 	{
 		co_await resume_foreground(Note_TextBlock().Dispatcher());
@@ -166,6 +173,10 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
+	/*
+	*	Color the text and dots in a given range. Dots from indexMin to indexMax will be colored
+	*	with the specified color.
+	*/
 	void MainPage::ColorForeground(int indexMin, int indexMax, const SolidColorBrush& color)
 	{
 		Note_TextBlock().Foreground(color);

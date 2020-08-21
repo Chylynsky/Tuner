@@ -127,12 +127,11 @@ namespace winrt::Tuner::implementation
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 
 		// Number of samples
-		static const diff_t N = last - first;
+		static const diff_t N = std::distance(first, last);
 		WINRT_ASSERT(N > 0);
 
 		// Iterator to the upper frequency boundary
-		static const _InIt maxFreqIter = first + static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency));
-		WINRT_ASSERT(maxFreqIter <= last);
+		static const _InIt maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency)));
 
 		std::pair<float, float> highestSumIndex{ 0.0, 0.0 };
 		std::pair<float, float> currentSumIndex{ 0.0, 0.0 };
@@ -140,11 +139,11 @@ namespace winrt::Tuner::implementation
 		// Index of the sample representing lower frequency bound
 		diff_t n = static_cast<diff_t>(MIN_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency);
 
-		for (; first +  n < maxFreqIter; n++) {
+		for (; std::distance(std::next(first, n), maxFreqIter) > 0; n++) {
 			currentSumIndex = std::make_pair(
-				std::abs(*(first + n)) *
-				((2 * n <= N) ? std::abs(*(first + 2 * n)) : 0) *
-				((3 * n <= N) ? std::abs(*(first + 3 * n)) : 0), n);
+				std::abs(*std::next(first + n)) *
+				((2 * n <= N) ? std::abs(*std::next(first, 2 * n)) : 0) *
+				((3 * n <= N) ? std::abs(*std::next(first, 3 * n)) : 0), n);
 			if (currentSumIndex.first > highestSumIndex.first) {
 				highestSumIndex = currentSumIndex;
 			}

@@ -21,3 +21,5 @@
 #include <type_traits>
 #include <limits>
 #include <cstdint>
+#include <algorithm>
+#include <execution>

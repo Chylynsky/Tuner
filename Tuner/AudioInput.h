@@ -16,7 +16,7 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
-		static constexpr uint32_t SAMPLE_BUFFER_COUNT{ 8U };
+		static constexpr uint32_t SAMPLE_BUFFER_COUNT{ 4U };
 
 		using SampleBuffer			= SampleBuffer<AUDIO_BUFFER_SIZE>;
 		using SampleBufferQueue		= std::queue<SampleBuffer*>;
