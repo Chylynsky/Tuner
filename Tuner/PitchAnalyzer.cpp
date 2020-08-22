@@ -267,7 +267,7 @@ namespace winrt::Tuner::implementation
 		sstr << "subplot(2, 1, 1)" << std::endl;
 		sstr << "plot(t, input(1 : input_size))" << std::endl;
 		sstr << "xlabel('Time [s]')" << std::endl;
-		sstr << "title('Raw input signal')" << std::endl;
+		sstr << "title('Windowed input signal')" << std::endl;
 		sstr << "subplot(2, 1, 2)" << std::endl;
 		sstr << "plot(n, spectrum)" << std::endl;
 		sstr << "xlabel('Frequency [Hz]')" << std::endl;
