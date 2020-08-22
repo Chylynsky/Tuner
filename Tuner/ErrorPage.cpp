@@ -28,7 +28,8 @@ namespace winrt::Tuner::implementation
 
     IAsyncAction ErrorPage::SettingsButton_Click(IInspectable const& sender, RoutedEventArgs const& e)
     {
-        bool result{ co_await Launcher::LaunchUriAsync(Uri(L"ms-settings:privacy-microphone")) };
+        bool result = co_await Launcher::LaunchUriAsync(Uri(L"ms-settings:privacy-microphone"));
+        WINRT_ASSERT(result);
     }
 
 

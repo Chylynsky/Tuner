@@ -72,6 +72,7 @@ namespace winrt::Tuner::implementation
 
 		// Sampling frequency must be set before performing any analysis
 		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
+
 		// Set sound analyzed callback
 		pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
 			SoundAnalyzed_Callback(note, frequency, cents); 
@@ -79,7 +80,7 @@ namespace winrt::Tuner::implementation
 
 		co_await pitchAnalyzer.InitializeAsync();
 
-		// Attach callback function
+		// Attach BufferFilled callback function
 		audioInput.BufferFilled([this](sample_t* first, sample_t* last) {
 			pitchAnalyzer.Analyze(first, last);
 		});
@@ -89,15 +90,15 @@ namespace winrt::Tuner::implementation
 		co_return InitializationStatus::Success;
 	}
 
-	/*
-	*	Function serves as a callback to the PitchAnalyzer objects' SoundAnalyzed event.
-	*/
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
 	{
 		co_await resume_foreground(TuningScreen().Dispatcher());
 
 		// Put the nearest note on the screen
 		Note_TextBlock().Text(to_hstring(note));
+
+		// Check if range is correct
+		WINRT_ASSERT(std::abs(cents) <= 50.0f);
 
 		// Note in tune
 		if (cents <= 2.0f && cents >= -2.0f) {
@@ -151,9 +152,6 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	/*
-	*	Set currently visible page depending on the current application state.
-	*/
 	IAsyncAction MainPage::SetStateAsync(MainPageState state)
 	{
 		co_await resume_foreground(Note_TextBlock().Dispatcher());
@@ -173,10 +171,6 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	/*
-	*	Color the text and dots in a given range. Dots from indexMin to indexMax will be colored
-	*	with the specified color.
-	*/
 	void MainPage::ColorForeground(int indexMin, int indexMax, const SolidColorBrush& color)
 	{
 		Note_TextBlock().Foreground(color);

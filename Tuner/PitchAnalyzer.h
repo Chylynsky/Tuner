@@ -36,7 +36,8 @@ namespace winrt::Tuner::implementation
 		static constexpr float BASE_NOTE_FREQUENCY{ 440.0f };
 
 		// Type aliases
-		using SampleBuffer			= SampleBuffer<OUTPUT_SIGNAL_SIZE>;
+		using SampleBuffer			= implementation::SampleBuffer<OUTPUT_SIGNAL_SIZE>;
+		using WindowCoeffBuffer		= implementation::SampleBuffer<AUDIO_BUFFER_SIZE>;
 		using FFTResultBuffer		= std::array<complex_t, FFT_RESULT_SIZE>;
 		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
 		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
@@ -80,9 +81,9 @@ namespace winrt::Tuner::implementation
 		// FIR filter parameters
 		SampleBuffer filterCoeff;
 		FFTResultBuffer filterFreqResponse;
-		
-		// Convolution result
-		SampleBuffer outputSignal;
+
+		// Window coefficients
+		WindowCoeffBuffer windowCoeffBuffer;
 
 		float samplingFrequency;
 
@@ -110,45 +111,43 @@ namespace winrt::Tuner::implementation
 #endif
 	};
 
-	inline void PitchAnalyzer::SetSamplingFrequency(float samplingFrequency) noexcept
+	inline void PitchAnalyzer::SetSamplingFrequency(float newSamplingFrequency) noexcept
 	{
-		this->samplingFrequency = samplingFrequency;
+		this->samplingFrequency = newSamplingFrequency;
 	}
 
-	inline void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
+	inline void PitchAnalyzer::SoundAnalyzed(SoundAnalyzedCallback callback) noexcept
 	{
-		WINRT_ASSERT(soundAnalyzedCallback);
-		this->soundAnalyzedCallback = soundAnalyzedCallback;
+		// soundAnalyzedCallback should be valid at this point
+		WINRT_ASSERT(callback);
+		this->soundAnalyzedCallback = callback;
 	}
 
 	template<typename _InIt>
 	float PitchAnalyzer::HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept
 	{
+		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
 
 		// Number of samples
 		static const diff_t N = std::distance(first, last);
-		WINRT_ASSERT(N > 0);
 
 		// Iterator to the upper frequency boundary
 		static const _InIt maxFreqIter = std::next(first, static_cast<diff_t>(1U + static_cast<diff_t>(MAX_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency)));
 
-		std::pair<float, float> highestSumIndex{ 0.0, 0.0 };
-		std::pair<float, float> currentSumIndex{ 0.0, 0.0 };
-
 		// Index of the sample representing lower frequency bound
 		diff_t n = static_cast<diff_t>(MIN_FREQUENCY) * N / static_cast<diff_t>(samplingFrequency);
-
-		for (; std::distance(std::next(first, n), maxFreqIter) > 0; n++) {
-			currentSumIndex = std::make_pair(
-				std::abs(*std::next(first + n)) *
-				((2 * n <= N) ? std::abs(*std::next(first, 2 * n)) : 0) *
-				((3 * n <= N) ? std::abs(*std::next(first, 3 * n)) : 0), n);
+		auto highestSumIndex = std::make_pair(0.0f, 0.0f);
+		for (; std::distance(std::next(first, 3 * n), maxFreqIter) > 0; n++) {
+			auto currentSumIndex = std::make_pair(
+				std::abs(*std::next(first, n)) *
+				std::abs(*std::next(first, 2 * n)) *
+				std::abs(*std::next(first, 3 * n)), n);
 			if (currentSumIndex.first > highestSumIndex.first) {
 				highestSumIndex = currentSumIndex;
 			}
 		}
 
-		return highestSumIndex.second * static_cast<diff_t>(samplingFrequency) / N;
+		return highestSumIndex.second * samplingFrequency / static_cast<float>(N);
 	}
 }

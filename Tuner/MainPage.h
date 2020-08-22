@@ -8,6 +8,8 @@ namespace winrt::Tuner::implementation
 {
     struct MainPage : MainPageT<MainPage>
     {
+        using DotArray = std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>;
+
         enum class InitializationStatus {
             Failure,
             Success
@@ -29,7 +31,7 @@ namespace winrt::Tuner::implementation
 
         AudioInput audioInput;
 		PitchAnalyzer pitchAnalyzer;
-        std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13> dots;
+        DotArray dots;
 
         MainPage();
         ~MainPage();
@@ -39,8 +41,21 @@ namespace winrt::Tuner::implementation
 
         winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         std::future<InitializationStatus> InitializeFunctionality();
+
+        /*
+        *	Function serves as a callback to the PitchAnalyzer objects' SoundAnalyzed event.
+        */
         winrt::Windows::Foundation::IAsyncAction SoundAnalyzed_Callback(const std::string& note, float frequency, float cents);
+
+        /*
+        *	Set currently visible page depending on the current application state.
+        */
         winrt::Windows::Foundation::IAsyncAction SetStateAsync(MainPageState state);
+
+        /*
+        *	Color the text and dots in a given range. Dots from indexMin to indexMax will be colored
+        *	with the specified color.
+        */
         void ColorForeground(int indexMin, int indexMax, const winrt::Windows::UI::Xaml::Media::SolidColorBrush& color);
     };
 

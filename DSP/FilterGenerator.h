@@ -5,7 +5,7 @@
 namespace DSP
 {
 	template<typename T, typename T2, typename _InIt>
-	void GenerateBandPassFIR(T fc1, T fc2, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateBandPassFIR(T fc1, T fc2, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::BlackmanHarris)
 	{
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
@@ -20,14 +20,16 @@ namespace DSP
 
 		WindowGenerator::Generate(windowType, first, last);
 
-		for (diff_t n = 0; first != last; n++, first++) {
+		diff_t n = 0;
+		std::for_each(first, last, [&n, &N, &NHalf, &a0, &a1](value_t& val) {
 			value_t nDelayed = static_cast<value_t>(n - NHalf);
-			*first *= a1 / pi<value_t> * sinc(nDelayed * a1) - a0 / pi<value_t> * sinc(nDelayed * a0);
-		}
+			val *= a1 / pi<value_t> * sinc(nDelayed * a1) - a0 / pi<value_t> * sinc(nDelayed * a0);
+			n++;
+		});
 	}
 
 	template<typename T, typename T2, typename _InIt>
-	void GenerateLowPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateLowPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::BlackmanHarris)
 	{
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
@@ -41,13 +43,15 @@ namespace DSP
 
 		WindowGenerator::Generate(windowType, first, last);
 
-		for (diff_t n = 0; first != last; n++, first++) {
-			*first *= a0 / pi<value_t> * sinc(static_cast<value_t>(n - NHalf) * a0);
-		}
+		diff_t n = 0;
+		std::for_each(first, last, [&n, &N, &NHalf, &a0](value_t& val) {
+			val *= a0 / pi<value_t> * sinc(static_cast<value_t>(n - NHalf) * a0);
+			n++;
+		});
 	}
 
 	template<typename T, typename T2, typename _InIt>
-	void GenerateHighPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::Blackman)
+	void GenerateHighPassFIR(T fc, T2 samplingFreq, _InIt first, const _InIt last, WindowGenerator::WindowType windowType = WindowGenerator::WindowType::BlackmanHarris)
 	{
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
@@ -61,9 +65,11 @@ namespace DSP
 
 		WindowGenerator::Generate(windowType, first, last);
 
-		for (diff_t n = 0; first != last; n++, first++) {
-			value_t nDelayed = n - NHalf;
-			*first *= sinc(nDelayed) - a0 / pi<value_t> * sinc(nDelayed * a0);
-		}
+		diff_t n = 0;
+		std::for_each(first, last, [&n, &N, &NHalf, &a0](value_t& val) {
+			value_t nDelayed = static_cast<value_t>(n - NHalf);
+			val *= sinc(nDelayed) - a0 / pi<value_t> * sinc(nDelayed * a0);
+			n++;
+		});
 	}
 }

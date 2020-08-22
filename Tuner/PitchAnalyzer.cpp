@@ -96,7 +96,7 @@ namespace winrt::Tuner::implementation
 	IAsyncAction PitchAnalyzer::InitializeAsync() noexcept
 	{
 		// Check if FFT plan was created earlier
-		bool loadFFTResult{ co_await LoadFFTPlan() };
+		bool loadFFTResult = co_await LoadFFTPlan();
 
 		if (!loadFFTResult) {
 			fftPlan = fftwf_plan_dft_r2c_1d(
@@ -127,6 +127,11 @@ namespace winrt::Tuner::implementation
 			std::next(filterCoeff.begin(), FILTER_SIZE),
 			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
+		DSP::WindowGenerator::Generate(
+			DSP::WindowGenerator::WindowType::BlackmanHarris,
+			windowCoeffBuffer.begin(),
+			windowCoeffBuffer.end());
+
 		fftwf_execute(fftPlan);
 
 #ifdef CREATE_MATLAB_PLOTS
@@ -145,8 +150,12 @@ namespace winrt::Tuner::implementation
 		complex_t* fftResultFirst			= fftResult.data();
 		complex_t* fftResultLast			= fftResultFirst + FFT_RESULT_SIZE;
 
+		// Apply window function
+		std::transform(std::execution::par, first, last, windowCoeffBuffer.begin(), first, std::multiplies<sample_t>());
+
 		// Execute FFT on the input signal
 		fftwf_execute_dft_r2c(fftPlan, first, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+
 		// Apply FIR filter to the input signal
 		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());
 
@@ -213,11 +222,11 @@ namespace winrt::Tuner::implementation
 			sstr << 20.0f * std::log10(std::abs(val)) << " ";
 		}
 		sstr << " ];" << std::endl;
-		sstr << "nexttile" << std::endl;
+		sstr << "subplot(2, 1, 1)" << std::endl;
 		sstr << "plot(t, filter(1 : filter_size))" << std::endl;
 		sstr << "xlabel('Time [s]')" << std::endl;
 		sstr << "title('FIR filter impulse response')" << std::endl;
-		sstr << "nexttile" << std::endl;
+		sstr << "subplot(2, 1, 1)" << std::endl;
 		sstr << "plot(n, filter_freq_response)" << std::endl;
 		sstr << "xlabel('Frequency [Hz]')" << std::endl;
 		sstr << "ylabel('Magnitude [dB]')" << std::endl;
@@ -255,11 +264,11 @@ namespace winrt::Tuner::implementation
 		}
 
 		sstr << " ];" << std::endl;
-		sstr << "nexttile" << std::endl;
+		sstr << "subplot(2, 1, 1)" << std::endl;
 		sstr << "plot(t, input(1 : input_size))" << std::endl;
 		sstr << "xlabel('Time [s]')" << std::endl;
 		sstr << "title('Raw input signal')" << std::endl;
-		sstr << "nexttile" << std::endl;
+		sstr << "subplot(2, 1, 2)" << std::endl;
 		sstr << "plot(n, spectrum)" << std::endl;
 		sstr << "xlabel('Frequency [Hz]')" << std::endl;
 		sstr << "ylabel('Magnitude [dB]')" << std::endl;

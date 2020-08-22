@@ -29,14 +29,14 @@ namespace winrt::Tuner::implementation
 		// Keep std::futures with asynchronously running callbacks in a queue form
 		AsyncCallbackQueue asyncCallbackQueue;
 
-		winrt::Windows::Media::Audio::AudioGraph audioGraph;
-		winrt::Windows::Media::Audio::AudioGraphSettings audioSettings;
-		winrt::Windows::Media::Audio::AudioDeviceInputNode inputDevice;
-		winrt::Windows::Media::Audio::AudioFrameOutputNode frameOutputNode;
+		winrt::Windows::Media::Audio::AudioGraph			audioGraph;
+		winrt::Windows::Media::Audio::AudioGraphSettings	audioSettings;
+		winrt::Windows::Media::Audio::AudioDeviceInputNode	inputDevice;
+		winrt::Windows::Media::Audio::AudioFrameOutputNode	frameOutputNode;
 
-		SampleBufferArray sampleBufferArray;
-		SampleBufferQueue sampleBufferQueue;
-		SampleBuffer* sampleBufferPtr;
+		SampleBufferArray	sampleBufferArray;
+		SampleBufferQueue	sampleBufferQueue;
+		SampleBuffer*		sampleBufferPtr;
 
 		// Helper pointers
 		sample_t* first;
@@ -90,9 +90,9 @@ namespace winrt::Tuner::implementation
 		audioGraph.Stop();
 	}
 
-	inline void AudioInput::BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept
+	inline void AudioInput::BufferFilled(BufferFilledCallback callback) noexcept
 	{
-		this->bufferFilledCallback = bufferFilledCallback;
+		this->bufferFilledCallback = callback;
 	}
 
 	// Get the number of recorded samples
