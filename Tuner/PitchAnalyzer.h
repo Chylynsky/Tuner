@@ -1,5 +1,5 @@
 #pragma once
-#include "AudioInput.h"
+#include "PitchAnalyzerTraits.h"
 #include "FilterGenerator.h"
 
 // Enable/disable Matlab code generation
@@ -25,6 +25,10 @@ namespace winrt::Tuner::implementation
 	class PitchAnalyzer
 	{
 	public:
+
+		static_assert(Is_positive_power_of_2(audioBufferSize), "Audio buffer size must be a power of 2.");
+		static_assert(Is_positive_power_of_2(filterSize), "Audio buffer size must be a power of 2.");
+
 		static constexpr uint32_t s_outputSignalSize{ audioBufferSize + filterSize - 1U };
 		static constexpr uint32_t s_fftResultSize{ s_outputSignalSize / 2U + 1U };
 
@@ -67,23 +71,24 @@ namespace winrt::Tuner::implementation
 		};
 
 		// Callback function called when sound is analyzed
-		SoundAnalyzedCallback m_soundAnalyzedCallback;
+		SoundAnalyzedCallback	m_soundAnalyzedCallback;
 
-		fftwf_plan m_pFftPlan;
-		FFTResultBuffer m_fftResult;
+		fftwf_plan				m_fftPlan;
+		FFTResultBuffer			m_fftResult;
 
 		// FIR filter parameters
-		SampleBuffer m_filterCoeff;
-		FFTResultBuffer m_filterFreqResponse;
+		SampleBuffer			m_filterCoeff;
+		FFTResultBuffer			m_filterFreqResponse;
 
 		// Window coefficients
-		WindowCoeffBuffer m_windowCoeffBuffer;
+		WindowCoeffBuffer		m_windowCoeffBuffer;
 
-		const float m_baseToneFrequency;
+		// Frequency of the base tone
+		const float				m_baseToneFrequency;
 
 		// Requested frequency range
-		const float m_minFrequency;
-		const float m_maxFrequency;
+		const float				m_minFrequency;
+		const float				m_maxFrequency;
 
 		float m_samplingFrequency;
 
@@ -116,7 +121,7 @@ namespace winrt::Tuner::implementation
 
 	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
 	inline PitchAnalyzer<audioBufferSize, filterSize, sample_t>::PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency) 
-		: m_pFftPlan{ nullptr }, m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, 
+		: m_fftPlan{ nullptr }, m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, 
 		m_maxFrequency{ maxFrequency }, m_samplingFrequency{ samplingFrequency }, m_noteFrequencies{ std::move(InitializeNoteFrequenciesMap()) }
 	{
 		m_filterCoeff.fill(0.0f);
@@ -126,9 +131,9 @@ namespace winrt::Tuner::implementation
 	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
 	inline PitchAnalyzer<audioBufferSize, filterSize, sample_t>::~PitchAnalyzer()
 	{
-		if (m_pFftPlan)
+		if (m_fftPlan)
 		{
-			fftwf_destroy_plan(m_pFftPlan);
+			fftwf_destroy_plan(m_fftPlan);
 		}
 		fftwf_cleanup();
 	}
@@ -162,7 +167,7 @@ namespace winrt::Tuner::implementation
 
 		if (!loadFFTResult) 
 		{
-			m_pFftPlan = fftwf_plan_dft_r2c_1d(
+			m_fftPlan = fftwf_plan_dft_r2c_1d(
 				s_fftResultSize,
 				m_filterCoeff.data(),
 				reinterpret_cast<fftwf_complex*>(m_filterFreqResponse.data()),
@@ -172,7 +177,7 @@ namespace winrt::Tuner::implementation
 		}
 		else 
 		{
-			m_pFftPlan = fftwf_plan_dft_r2c_1d(
+			m_fftPlan = fftwf_plan_dft_r2c_1d(
 				s_fftResultSize,
 				m_filterCoeff.data(),
 				reinterpret_cast<fftwf_complex*>(m_filterFreqResponse.data()),
@@ -180,7 +185,7 @@ namespace winrt::Tuner::implementation
 		}
 
 		// FFTW plan should be valid at this point
-		WINRT_ASSERT(m_pFftPlan);
+		WINRT_ASSERT(m_fftPlan);
 
 		// Generate filter coefficients
 		DSP::GenerateBandPassFIR(
@@ -196,7 +201,7 @@ namespace winrt::Tuner::implementation
 			m_windowCoeffBuffer.begin(),
 			m_windowCoeffBuffer.end());
 
-		fftwf_execute(m_pFftPlan);
+		fftwf_execute(m_fftPlan);
 
 #ifdef CREATE_MATLAB_PLOTS
 		ExportFilterMatlab();
@@ -219,7 +224,7 @@ namespace winrt::Tuner::implementation
 		std::transform(std::execution::par, first, last, m_windowCoeffBuffer.begin(), first, std::multiplies<sample_t>());
 
 		// Execute FFT on the input signal
-		fftwf_execute_dft_r2c(m_pFftPlan, first, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+		fftwf_execute_dft_r2c(m_fftPlan, first, reinterpret_cast<fftwf_complex*>(fftResultFirst));
 
 		// Apply FIR filter to the input signal
 		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());

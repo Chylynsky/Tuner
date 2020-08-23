@@ -183,6 +183,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="PitchAnalyzer.h" />
+    <ClInclude Include="PitchAnalyzerTraits.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

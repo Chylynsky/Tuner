@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "MainPage.g.h"
 #include "PitchAnalyzer.h"
+#include "AudioInput.h"
 #include "ErrorPage.h"
 
 namespace winrt::Tuner::implementation
