@@ -2,13 +2,13 @@
 #include "MainPage.g.h"
 #include "PitchAnalyzer.h"
 #include "ErrorPage.h"
-#include "TypeAliases.h"
 
 namespace winrt::Tuner::implementation
 {
     struct MainPage : MainPageT<MainPage>
     {
         using DotArray = std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>;
+        using sample_t = AudioInput::sample_t;
 
         enum class InitializationStatus {
             Failure,
@@ -30,7 +30,7 @@ namespace winrt::Tuner::implementation
         };
 
         AudioInput audioInput;
-		PitchAnalyzer pitchAnalyzer;
+		PitchAnalyzer<AudioInput::AUDIO_BUFFER_SIZE, 1 << 12, AudioInput::sample_t> pitchAnalyzer;
         DotArray dots;
 
         MainPage();

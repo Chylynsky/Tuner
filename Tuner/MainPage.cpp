@@ -15,7 +15,7 @@ using namespace Windows::System;
 
 namespace winrt::Tuner::implementation
 {
-	MainPage::MainPage()
+	MainPage::MainPage() : pitchAnalyzer{ 440.0f, 80.0f, 1200.0f, 44100.0f }
     {
         InitializeComponent();
 

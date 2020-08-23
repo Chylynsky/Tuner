@@ -1,5 +1,4 @@
 #pragma once
-#include "TypeAliases.h"
 
 namespace winrt::Tuner::implementation
 {
@@ -16,13 +15,19 @@ namespace winrt::Tuner::implementation
 
 	class AudioInput
 	{
+	public:
+
+		static constexpr uint32_t AUDIO_BUFFER_SIZE{ 1 << 16 };
 		static constexpr uint32_t SAMPLE_BUFFER_COUNT{ 4U };
 
-		using SampleBuffer			= SampleBuffer<AUDIO_BUFFER_SIZE>;
+		using sample_t				= float;
+		using SampleBuffer			= std::array<sample_t, AUDIO_BUFFER_SIZE>;
 		using SampleBufferQueue		= std::queue<SampleBuffer*>;
 		using SampleBufferArray		= std::array<SampleBuffer, SAMPLE_BUFFER_COUNT>;
 		using BufferFilledCallback	= std::function<void(sample_t* first, sample_t* last)>;
 		using AsyncCallbackQueue	= std::queue<std::future<void>>;
+
+	private:
 
 		// BufferFilled event handler
 		BufferFilledCallback bufferFilledCallback;
