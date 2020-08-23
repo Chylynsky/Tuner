@@ -276,6 +276,7 @@
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="PitchAnalyzer.cpp" />
+    <ClCompile Include="PitchAnalyzerTypeTraits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App.idl">

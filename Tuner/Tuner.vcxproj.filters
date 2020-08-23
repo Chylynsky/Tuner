@@ -18,6 +18,7 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="AudioInput.cpp" />
     <ClCompile Include="PitchAnalyzer.cpp" />
+    <ClCompile Include="PitchAnalyzerTypeTraits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

@@ -1,6 +1,4 @@
 #pragma once
-#include <type_traits>
-
 namespace winrt::Tuner::implementation
 {
 	template<typename _Ty>

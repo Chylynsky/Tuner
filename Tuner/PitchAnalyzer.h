@@ -21,24 +21,32 @@
 
 namespace winrt::Tuner::implementation
 {
-	template <uint32_t audioBufferSize, uint32_t filterSize, typename sample_t = float>
-	class PitchAnalyzer
+	template <uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t = float>
+	struct PitchAnalyzer
 	{
-	public:
+		static_assert(Is_positive_power_of_2(s_audioBufferSize), "Audio buffer size must be a power of 2.");
+		static_assert(Is_positive_power_of_2(s_filterSize), "Audio buffer size must be a power of 2.");
 
-		static_assert(Is_positive_power_of_2(audioBufferSize), "Audio buffer size must be a power of 2.");
-		static_assert(Is_positive_power_of_2(filterSize), "Audio buffer size must be a power of 2.");
-
-		static constexpr uint32_t s_outputSignalSize{ audioBufferSize + filterSize - 1U };
-		static constexpr uint32_t s_fftResultSize{ s_outputSignalSize / 2U + 1U };
+		static constexpr float		s_defaultSamplingFrequency{ 44100.0f };
+		static constexpr uint32_t	s_outputSignalSize{ s_audioBufferSize + s_filterSize - 1U };
+		static constexpr uint32_t	s_fftResultSize{ s_outputSignalSize / 2U + 1U };
 
 		// Type aliases
 		using complex_t				= std::complex<sample_t>;
 		using SampleBuffer			= std::array<sample_t, s_outputSignalSize>;
-		using WindowCoeffBuffer		= std::array<sample_t, audioBufferSize>;
+		using WindowCoeffBuffer		= std::array<sample_t, s_audioBufferSize>;
 		using FFTResultBuffer		= std::array<complex_t, s_fftResultSize>;
 		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
 		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
+
+		// Struct holding the result of each, returned from GetNote() function.
+		struct PitchAnalysisResult
+		{
+			const std::string& note;
+			const float cents;
+		};
+
+	public:
 
 		PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency);
 		~PitchAnalyzer();
@@ -62,13 +70,6 @@ namespace winrt::Tuner::implementation
 		void Analyze(sample_t* first, sample_t* last) noexcept;
 
 	private:
-
-		// Struct holding the result of each, returned from GetNote() function.
-		struct PitchAnalysisResult
-		{
-			const std::string& note;
-			const float cents;
-		};
 
 		// Callback function called when sound is analyzed
 		SoundAnalyzedCallback	m_soundAnalyzedCallback;
@@ -119,8 +120,8 @@ namespace winrt::Tuner::implementation
 #endif
 	};
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline PitchAnalyzer<audioBufferSize, filterSize, sample_t>::PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency) 
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency = s_defaultSamplingFrequency)
 		: m_fftPlan{ nullptr }, m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, 
 		m_maxFrequency{ maxFrequency }, m_samplingFrequency{ samplingFrequency }, m_noteFrequencies{ std::move(InitializeNoteFrequenciesMap()) }
 	{
@@ -128,8 +129,8 @@ namespace winrt::Tuner::implementation
 		m_windowCoeffBuffer.fill(0.0f);
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline PitchAnalyzer<audioBufferSize, filterSize, sample_t>::~PitchAnalyzer()
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::~PitchAnalyzer()
 	{
 		if (m_fftPlan)
 		{
@@ -138,29 +139,29 @@ namespace winrt::Tuner::implementation
 		fftwf_cleanup();
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SetSamplingFrequency(float newSamplingFrequency) noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline void PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::SetSamplingFrequency(float newSamplingFrequency) noexcept
 	{
 		this->m_samplingFrequency = newSamplingFrequency;
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SetBaseToneFrequency(float baseToneFrequency) noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline void PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::SetBaseToneFrequency(float baseToneFrequency) noexcept
 	{
 		m_baseToneFrequency = baseToneFrequency;
 		m_noteFrequencies = InitializeNoteFrequenciesMap();
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SoundAnalyzed(SoundAnalyzedCallback callback) noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline void PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::SoundAnalyzed(SoundAnalyzedCallback callback) noexcept
 	{
 		// soundAnalyzedCallback should be valid at this point
 		WINRT_ASSERT(callback);
 		this->m_soundAnalyzedCallback = callback;
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<audioBufferSize, filterSize, sample_t>::InitializeAsync() noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::InitializeAsync() noexcept
 	{
 		// Check if FFT plan was created earlier
 		bool loadFFTResult = co_await LoadFFTPlan();
@@ -193,7 +194,7 @@ namespace winrt::Tuner::implementation
 			m_maxFrequency,
 			m_samplingFrequency,
 			m_filterCoeff.begin(),
-			std::next(m_filterCoeff.begin(), filterSize),
+			std::next(m_filterCoeff.begin(), s_filterSize),
 			DSP::WindowGenerator::WindowType::BlackmanHarris);
 
 		DSP::WindowGenerator::Generate(
@@ -209,8 +210,8 @@ namespace winrt::Tuner::implementation
 
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::Analyze(sample_t* first, sample_t* last) noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline void PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::Analyze(sample_t* first, sample_t* last) noexcept
 	{
 		// SoundAnalyzed callback must be attached before performing analysis.
 		WINRT_ASSERT(m_soundAnalyzedCallback);
@@ -245,8 +246,8 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline auto PitchAnalyzer<audioBufferSize, filterSize, sample_t>::InitializeNoteFrequenciesMap() noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline auto PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::InitializeNoteFrequenciesMap() noexcept
 	{
 		// Constant needed for note frequencies calculation
 		const float a{ pow(2.0f, 1.0f / 12.0f) };
@@ -260,12 +261,14 @@ namespace winrt::Tuner::implementation
 		NoteFrequenciesMap result;
 
 		// Fill a map for notes below  A4
-		while (currentFrequency >= m_minFrequency) {
+		while (currentFrequency >= m_minFrequency) 
+		{
 			currentFrequency = m_baseToneFrequency * std::pow(a, halfSteps);
 			result[currentFrequency] = *octaveIter + std::to_string(currentOctave);
 			halfSteps--;
 
-			if (octaveIter == octave.begin()) {
+			if (octaveIter == octave.begin()) 
+			{
 				octaveIter = octave.end();
 				currentOctave--;
 			}
@@ -281,7 +284,8 @@ namespace winrt::Tuner::implementation
 		// Fill a map for notes above and equal A4
 		while (currentFrequency <= m_maxFrequency) {
 
-			if (octaveIter == octave.end()) {
+			if (octaveIter == octave.end()) 
+			{
 				octaveIter = octave.begin();
 				currentOctave++;
 			}
@@ -295,9 +299,9 @@ namespace winrt::Tuner::implementation
 		return result;
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
 	template<typename _InIt>
-	inline float PitchAnalyzer<audioBufferSize, filterSize, sample_t>::HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept
+	inline float PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept
 	{
 		using value_t = typename std::iterator_traits<_InIt>::value_type;
 		using diff_t = typename std::iterator_traits<_InIt>::difference_type;
@@ -311,12 +315,14 @@ namespace winrt::Tuner::implementation
 		// Index of the sample representing lower frequency bound
 		diff_t n = static_cast<diff_t>(m_minFrequency) * N / static_cast<diff_t>(m_samplingFrequency);
 		auto highestSumIndex = std::make_pair(0.0f, 0.0f);
-		for (; std::distance(std::next(first, 3 * n), maxFreqIter) > 0; n++) {
+		for (; std::distance(std::next(first, 3 * n), maxFreqIter) > 0; n++) 
+		{
 			auto currentSumIndex = std::make_pair(
 				std::abs(*std::next(first, n)) *
 				std::abs(*std::next(first, 2 * n)) *
 				std::abs(*std::next(first, 3 * n)), n);
-			if (currentSumIndex.first > highestSumIndex.first) {
+			if (currentSumIndex.first > highestSumIndex.first) 
+			{
 				highestSumIndex = currentSumIndex;
 			}
 		}
@@ -324,8 +330,8 @@ namespace winrt::Tuner::implementation
 		return highestSumIndex.second * m_samplingFrequency / static_cast<float>(N);
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline auto PitchAnalyzer<audioBufferSize, filterSize, sample_t>::GetNote(float frequency) const noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline auto PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::GetNote(float frequency) const noexcept
 	{
 		// Get the nearest note above or equal
 		auto high = m_noteFrequencies.lower_bound(frequency);
@@ -346,8 +352,8 @@ namespace winrt::Tuner::implementation
 		}
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SaveFFTPlan() const noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::SaveFFTPlan() const noexcept
 	{
 		using namespace winrt::Windows::Storage;
 
@@ -359,8 +365,8 @@ namespace winrt::Tuner::implementation
 		co_await FileIO::WriteTextAsync(file, fftPlanBuffer);
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncOperation<bool> PitchAnalyzer<audioBufferSize, filterSize, sample_t>::LoadFFTPlan() const noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline winrt::Windows::Foundation::IAsyncOperation<bool> PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::LoadFFTPlan() const noexcept
 	{
 		using namespace winrt::Windows::Storage;
 
@@ -380,27 +386,27 @@ namespace winrt::Tuner::implementation
 	}
 
 #ifdef CREATE_MATLAB_PLOTS
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<audioBufferSize, filterSize, sample_t>::ExportFilterMatlab() const noexcept
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
+	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::ExportFilterMatlab() const noexcept
 	{
 		using namespace winrt::Windows::Storage;
 
 		std::stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << std::endl;
-		sstr << "filter_size = " << FILTER_SIZE << ";" << std::endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
+		sstr << "fs = " << m_samplingFrequency << ";" << std::endl;
+		sstr << "filter_size = " << s_filterSize << ";" << std::endl;
+		sstr << "fft_size = " << s_fftResultSize << ";" << std::endl;
 		sstr << "time_step = 1 / fs;" << std::endl;
 		sstr << "freq_step = fs / fft_size;" << std::endl;
 		sstr << "t = 0 : time_step : (filter_size - 1) * time_step;" << std::endl;
 		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
 		sstr << "filter = " << "[ ";
-		for (auto& val : filterCoeff) {
+		for (auto& val : m_filterCoeff) {
 			sstr << val << " ";
 		}
 		sstr << " ];" << std::endl;
 
 		sstr << "filter_freq_response = " << "[ ";
-		for (auto& val : filterFreqResponse) {
+		for (auto& val : m_filterFreqResponse) {
 			sstr << 20.0f * std::log10(std::abs(val)) << " ";
 		}
 		sstr << " ];" << std::endl;
@@ -419,32 +425,34 @@ namespace winrt::Tuner::implementation
 		co_await FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
 	}
 
-	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
+	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
 	inline winrt::Windows::Foundation::IAsyncAction 
-		PitchAnalyzer<audioBufferSize, filterSize, sample_t>::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst) const noexcept
+		PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::ExportSoundAnalysisMatlab(sample_t* audioBufferFirst, complex_t* fftResultFirst) const noexcept
 	{
 		using namespace winrt::Windows::Storage;
 
 		std::stringstream sstr;
-		sstr << "fs = " << samplingFrequency << ";" << std::endl;
-		sstr << "input_size = " << AUDIO_BUFFER_SIZE << ";" << std::endl;
-		sstr << "fft_size = " << FFT_RESULT_SIZE << ";" << std::endl;
+		sstr << "fs = " << m_samplingFrequency << ";" << std::endl;
+		sstr << "input_size = " << s_audioBufferSize << ";" << std::endl;
+		sstr << "fft_size = " << s_fftResultSize << ";" << std::endl;
 		sstr << "time_step = 1 / fs;" << std::endl;
 		sstr << "freq_step = fs / fft_size;" << std::endl;
 		sstr << "t = 0 : time_step : (input_size - 1) * time_step;" << std::endl;
 		sstr << "n = 0 : freq_step : fs - freq_step;" << std::endl;
 
 		sstr << "input = " << "[ ";
-		auto audioBufferLast = audioBufferFirst + AUDIO_BUFFER_SIZE;
-		while (audioBufferFirst != audioBufferLast) {
+		auto audioBufferLast = audioBufferFirst + s_audioBufferSize;
+		while (audioBufferFirst != audioBufferLast) 
+		{
 			sstr << *audioBufferFirst << " ";
 			audioBufferFirst++;
 		}
 		sstr << " ];" << std::endl;
 
 		sstr << "spectrum = " << "[ ";
-		auto fftResultLast = fftResultFirst + FFT_RESULT_SIZE;
-		while (fftResultFirst != fftResultLast) {
+		auto fftResultLast = fftResultFirst + s_fftResultSize;
+		while (fftResultFirst != fftResultLast) 
+		{
 			sstr << 20.0f * std::log10(std::abs(*fftResultFirst)) << " ";
 			fftResultFirst++;
 		}
