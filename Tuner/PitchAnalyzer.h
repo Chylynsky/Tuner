@@ -44,6 +44,9 @@ namespace winrt::Tuner::implementation
 		// Default value is 44.1kHz.
 		void SetSamplingFrequency(float samplingFrequency) noexcept;
 
+		// Set base tone frequency.
+		void SetBaseToneFrequency(float baseToneFrequency) noexcept;
+
 		// Attach function that gets called when sound analysis is completed
 		void SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept;
 
@@ -134,6 +137,13 @@ namespace winrt::Tuner::implementation
 	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SetSamplingFrequency(float newSamplingFrequency) noexcept
 	{
 		this->m_samplingFrequency = newSamplingFrequency;
+	}
+
+	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
+	inline void PitchAnalyzer<audioBufferSize, filterSize, sample_t>::SetBaseToneFrequency(float baseToneFrequency) noexcept
+	{
+		m_baseToneFrequency = baseToneFrequency;
+		m_noteFrequencies = InitializeNoteFrequenciesMap();
 	}
 
 	template<uint32_t audioBufferSize, uint32_t filterSize, typename sample_t>
