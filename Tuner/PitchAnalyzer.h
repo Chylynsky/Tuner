@@ -1,6 +1,7 @@
 #pragma once
 #include "PitchAnalyzerTraits.h"
 #include "FilterGenerator.h"
+#include "FFTPlan.h"
 
 // Enable/disable Matlab code generation
 // If defined, debugging will stop on every 
@@ -27,13 +28,12 @@ namespace winrt::Tuner::implementation
 		static_assert(Is_positive_power_of_2(s_audioBufferSize), "Audio buffer size must be a power of 2.");
 		static_assert(Is_positive_power_of_2(s_filterSize), "Audio buffer size must be a power of 2.");
 
-		static constexpr float		s_defaultSamplingFrequency{ 44100.0f };
-		static constexpr uint32_t	s_outputSignalSize{ s_audioBufferSize + s_filterSize - 1U };
-		static constexpr uint32_t	s_fftResultSize{ s_outputSignalSize / 2U + 1U };
+		static constexpr uint32_t	s_filteredSignalSize{ s_audioBufferSize + s_filterSize - 1U };
+		static constexpr uint32_t	s_fftResultSize{ s_filteredSignalSize / 2U + 1U };
 
 		// Type aliases
 		using complex_t				= std::complex<sample_t>;
-		using SampleBuffer			= std::array<sample_t, s_outputSignalSize>;
+		using SampleBuffer			= std::array<sample_t, s_filteredSignalSize>;
 		using WindowCoeffBuffer		= std::array<sample_t, s_audioBufferSize>;
 		using FFTResultBuffer		= std::array<complex_t, s_fftResultSize>;
 		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
@@ -65,7 +65,7 @@ namespace winrt::Tuner::implementation
 		// Deduce the best performant FFT algorithm or, if possible, load it from file
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync() noexcept;
 
-		// Function performs harmonic analysis on input signal and calls the callback function (passed in PitchAnalyzer::Run()) 
+		// Function performs harmonic analysis on input signal and calls the callback function
 		// for each analysis performed.
 		void Analyze(sample_t* first, sample_t* last) noexcept;
 
@@ -74,7 +74,6 @@ namespace winrt::Tuner::implementation
 		// Callback function called when sound is analyzed
 		SoundAnalyzedCallback	m_soundAnalyzedCallback;
 
-		fftwf_plan				m_fftPlan;
 		FFTResultBuffer			m_fftResult;
 
 		// FIR filter parameters
@@ -93,6 +92,8 @@ namespace winrt::Tuner::implementation
 
 		float m_samplingFrequency;
 
+		DSP::FFTPlan<sample_t> m_fftPlan;
+
 		// Frequencies and notes that represents them are stored in std::map<float, std::string>
 		const NoteFrequenciesMap m_noteFrequencies;
 
@@ -105,12 +106,6 @@ namespace winrt::Tuner::implementation
 		// Analyzes input frequency and returns a filled PitchAnalysisResult struct
 		auto GetNote(float frequency) const noexcept;
 
-		// Save fftwf_plan to LocalState folder via FFTW Wisdom
-		winrt::Windows::Foundation::IAsyncAction SaveFFTPlan() const noexcept;
-
-		// Load fftwf_plan
-		winrt::Windows::Foundation::IAsyncOperation<bool> LoadFFTPlan() const noexcept;
-
 #ifdef CREATE_MATLAB_PLOTS
 		// Create matlab .m file with filter parameters plots, saved in app's storage folder
 		winrt::Windows::Foundation::IAsyncAction ExportFilterMatlab() const noexcept;
@@ -121,9 +116,9 @@ namespace winrt::Tuner::implementation
 	};
 
 	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
-	inline PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency = s_defaultSamplingFrequency)
-		: m_fftPlan{ nullptr }, m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, 
-		m_maxFrequency{ maxFrequency }, m_samplingFrequency{ samplingFrequency }, m_noteFrequencies{ std::move(InitializeNoteFrequenciesMap()) }
+	inline PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::PitchAnalyzer(float baseFrequency, float minFrequency, float maxFrequency, float samplingFrequency)
+		: m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, m_maxFrequency{ maxFrequency }, m_samplingFrequency{ samplingFrequency }, 
+		m_noteFrequencies{ std::move(InitializeNoteFrequenciesMap()) }
 	{
 		m_filterCoeff.fill(0.0f);
 		m_windowCoeffBuffer.fill(0.0f);
@@ -132,11 +127,6 @@ namespace winrt::Tuner::implementation
 	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
 	inline PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::~PitchAnalyzer()
 	{
-		if (m_fftPlan)
-		{
-			fftwf_destroy_plan(m_fftPlan);
-		}
-		fftwf_cleanup();
 	}
 
 	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
@@ -164,25 +154,14 @@ namespace winrt::Tuner::implementation
 	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::InitializeAsync() noexcept
 	{
 		// Check if FFT plan was created earlier
-		bool loadFFTResult = co_await LoadFFTPlan();
+		bool loadFFTResult = co_await DSP::FFTPlan<float>::LoadFFTPlan(L"fft_plan.bin");
 
-		if (!loadFFTResult) 
+		m_fftPlan = DSP::FFTPlan<float>(m_filterCoeff.begin(), m_filterCoeff.end(), m_filterFreqResponse.begin(), DSP::flags::wisdom);
+
+		if (!m_fftPlan)
 		{
-			m_fftPlan = fftwf_plan_dft_r2c_1d(
-				s_fftResultSize,
-				m_filterCoeff.data(),
-				reinterpret_cast<fftwf_complex*>(m_filterFreqResponse.data()),
-				FFTW_MEASURE);
-			// Save created file
-			co_await SaveFFTPlan();
-		}
-		else 
-		{
-			m_fftPlan = fftwf_plan_dft_r2c_1d(
-				s_fftResultSize,
-				m_filterCoeff.data(),
-				reinterpret_cast<fftwf_complex*>(m_filterFreqResponse.data()),
-				FFTW_WISDOM_ONLY);
+			m_fftPlan = DSP::FFTPlan<float>(m_filterCoeff.begin(), m_filterCoeff.end(), m_filterFreqResponse.begin(), DSP::flags::measure);
+			m_fftPlan.SaveFFTPlan(L"fft_plan.bin");
 		}
 
 		// FFTW plan should be valid at this point
@@ -202,12 +181,11 @@ namespace winrt::Tuner::implementation
 			m_windowCoeffBuffer.begin(),
 			m_windowCoeffBuffer.end());
 
-		fftwf_execute(m_fftPlan);
+		m_fftPlan.Execute();
 
 #ifdef CREATE_MATLAB_PLOTS
 		ExportFilterMatlab();
 #endif
-
 	}
 
 	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
@@ -225,7 +203,7 @@ namespace winrt::Tuner::implementation
 		std::transform(std::execution::par, first, last, m_windowCoeffBuffer.begin(), first, std::multiplies<sample_t>());
 
 		// Execute FFT on the input signal
-		fftwf_execute_dft_r2c(m_fftPlan, first, reinterpret_cast<fftwf_complex*>(fftResultFirst));
+		m_fftPlan.Execute(first, last, fftResultFirst);
 
 		// Apply FIR filter to the input signal
 		std::transform(std::execution::par, fftResultFirst, fftResultLast, filterFreqResponseFirst, fftResultFirst, std::multiplies<complex_t>());
@@ -350,39 +328,6 @@ namespace winrt::Tuner::implementation
 		{
 			return PitchAnalysisResult{ (*low).second, 1200.0f * std::log2(frequency / (*low).first) };
 		}
-	}
-
-	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncAction PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::SaveFFTPlan() const noexcept
-	{
-		using namespace winrt::Windows::Storage;
-
-		char* fftPlanBufferRaw{ fftwf_export_wisdom_to_string() };
-		hstring fftPlanBuffer{ winrt::to_hstring(fftPlanBufferRaw) };
-
-		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
-		StorageFile file{ co_await storageFolder.CreateFileAsync(L"fft_plan.bin", CreationCollisionOption::ReplaceExisting) };
-		co_await FileIO::WriteTextAsync(file, fftPlanBuffer);
-	}
-
-	template<uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t>
-	inline winrt::Windows::Foundation::IAsyncOperation<bool> PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>::LoadFFTPlan() const noexcept
-	{
-		using namespace winrt::Windows::Storage;
-
-		StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
-		IStorageItem storageItem{ co_await storageFolder.TryGetItemAsync(L"fft_plan.bin") };
-
-		if (!storageItem) 
-		{
-			co_return false;
-		}
-
-		StorageFile file = storageItem.as<StorageFile>();
-		std::string fftPlanBuffer{ winrt::to_string(co_await FileIO::ReadTextAsync(file)) };
-		fftwf_import_wisdom_from_string(fftPlanBuffer.c_str());
-
-		co_return true;
 	}
 
 #ifdef CREATE_MATLAB_PLOTS

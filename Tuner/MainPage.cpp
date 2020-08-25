@@ -2,7 +2,6 @@
 #include "MainPage.h"
 #include "MainPage.g.cpp"
 
-using namespace std::placeholders;
 using namespace winrt;
 using namespace Windows::UI;
 using namespace Windows::UI::Xaml;
@@ -15,24 +14,24 @@ using namespace Windows::System;
 
 namespace winrt::Tuner::implementation
 {
-	MainPage::MainPage() : pitchAnalyzer{ 440.0f, 80.0f, 1200.0f, 44100.0f }
+	MainPage::MainPage() : m_pitchAnalyzer{ s_baseNoteFrequency, s_minFrequency, s_maxFrequency, 0.0f }
     {
         InitializeComponent();
 
 		// Gather dots in array
-		dots[0] = Dot0();
-		dots[1] = Dot1();
-		dots[2] = Dot2();
-		dots[3] = Dot3();
-		dots[4] = Dot4();
-		dots[5] = Dot5();
-		dots[6] = Dot6();
-		dots[7] = Dot7();
-		dots[8] = Dot8();
-		dots[9] = Dot9();
-		dots[10] = Dot10();
-		dots[11] = Dot11();
-		dots[12] = Dot12();
+		m_dotArray[0] = Dot0();
+		m_dotArray[1] = Dot1();
+		m_dotArray[2] = Dot2();
+		m_dotArray[3] = Dot3();
+		m_dotArray[4] = Dot4();
+		m_dotArray[5] = Dot5();
+		m_dotArray[6] = Dot6();
+		m_dotArray[7] = Dot7();
+		m_dotArray[8] = Dot8();
+		m_dotArray[9] = Dot9();
+		m_dotArray[10] = Dot10();
+		m_dotArray[11] = Dot11();
+		m_dotArray[12] = Dot12();
     }
 
 	MainPage::~MainPage()
@@ -53,41 +52,43 @@ namespace winrt::Tuner::implementation
 	{
 		co_await SetStateAsync(MainPageState::Loading);
 
-		InitializationStatus initResult{ co_await InitializeFunctionality() };
+		bool initResult = co_await InitializeFunctionality();
 
-		if (initResult != InitializationStatus::Success) {
+		if (!initResult) 
+		{
 			co_await SetStateAsync(MainPageState::Error);
 		}
 
 		co_await SetStateAsync(MainPageState::Tuning);
 	}
 
-	std::future<MainPage::InitializationStatus> MainPage::InitializeFunctionality()
+	IAsyncOperation<bool> MainPage::InitializeFunctionality()
 	{
-		AudioInputInitializationStatus initStatus{ co_await audioInput.InitializeAsync() };
+		AudioInputInitializationStatus initStatus = co_await m_audioInput.InitializeAsync();
 
-		if (initStatus != AudioInputInitializationStatus::Success) {
-			co_return InitializationStatus::Failure;
+		if (initStatus != AudioInputInitializationStatus::Success) 
+		{
+			co_return false;
 		}
 
 		// Sampling frequency must be set before performing any analysis
-		pitchAnalyzer.SetSamplingFrequency(static_cast<float>(audioInput.GetSampleRate()));
+		m_pitchAnalyzer.SetSamplingFrequency(static_cast<float>(m_audioInput.GetSampleRate()));
 
 		// Set sound analyzed callback
-		pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
+		m_pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
 			SoundAnalyzed_Callback(note, frequency, cents); 
 		});
 
-		co_await pitchAnalyzer.InitializeAsync();
+		co_await m_pitchAnalyzer.InitializeAsync();
 
 		// Attach BufferFilled callback function
-		audioInput.BufferFilled([this](sample_t* first, sample_t* last) {
-			pitchAnalyzer.Analyze(first, last);
+		m_audioInput.BufferFilled([this](sample_t* first, sample_t* last) {
+			m_pitchAnalyzer.Analyze(first, last);
 		});
 
-		audioInput.Start();
+		m_audioInput.Start();
 
-		co_return InitializationStatus::Success;
+		co_return true;
 	}
 
 	IAsyncAction MainPage::SoundAnalyzed_Callback(const std::string& note, float frequency, float cents)
@@ -174,12 +175,12 @@ namespace winrt::Tuner::implementation
 	void MainPage::ColorForeground(int indexMin, int indexMax, const SolidColorBrush& color)
 	{
 		Note_TextBlock().Foreground(color);
-		for (int i = 0; i < dots.size(); i++) {
+		for (int i = 0; i < m_dotArray.size(); i++) {
 			if (i >= indexMin && i <= indexMax) {
-				dots[i].Fill(color);
+				m_dotArray[i].Fill(color);
 			}
 			else {
-				dots[i].Fill(Color::Gray());
+				m_dotArray[i].Fill(Color::Gray());
 			}
 		}
 	}

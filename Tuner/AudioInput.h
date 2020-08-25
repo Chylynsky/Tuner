@@ -17,13 +17,13 @@ namespace winrt::Tuner::implementation
 	{
 	public:
 
-		static constexpr uint32_t AUDIO_BUFFER_SIZE{ 1 << 16 };
-		static constexpr uint32_t SAMPLE_BUFFER_COUNT{ 4U };
+		static constexpr uint32_t s_audioBufferSize{ 131072U };
+		static constexpr uint32_t s_sampleBufferCount{ 4U };
 
 		using sample_t				= float;
-		using SampleBuffer			= std::array<sample_t, AUDIO_BUFFER_SIZE>;
+		using SampleBuffer			= std::array<sample_t, s_audioBufferSize>;
 		using SampleBufferQueue		= std::queue<SampleBuffer*>;
-		using SampleBufferArray		= std::array<SampleBuffer, SAMPLE_BUFFER_COUNT>;
+		using SampleBufferArray		= std::array<SampleBuffer, s_sampleBufferCount>;
 		using BufferFilledCallback	= std::function<void(sample_t* first, sample_t* last)>;
 		using AsyncCallbackQueue	= std::queue<std::future<void>>;
 
@@ -76,13 +76,12 @@ namespace winrt::Tuner::implementation
 	inline void AudioInput::RunCallbackAsync(sample_t* ptrFirst, sample_t* ptrLast)
 	{
 		asyncCallbackQueue.pop();
-		asyncCallbackQueue.push(
-			std::async(
-				std::launch::async,
-				[this, ptrFirst, ptrLast]() {
-					bufferFilledCallback(ptrFirst, ptrLast);
-				}
-		));
+		asyncCallbackQueue.push(std::async(
+			std::launch::async,
+			[this, ptrFirst, ptrLast]() {
+				bufferFilledCallback(ptrFirst, ptrLast);
+			})
+		);
 	}
 
 	inline void AudioInput::Start() const noexcept

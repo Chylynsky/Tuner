@@ -10,6 +10,8 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="WindowGenerator.cpp" />
     <ClCompile Include="FilterGenerator.cpp" />
+    <ClCompile Include="FFTPlan.cpp" />
+    <ClCompile Include="DSPTypeTraits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -17,6 +19,8 @@
     <ClInclude Include="WindowGenerator.h" />
     <ClInclude Include="FilterGenerator.h" />
     <ClInclude Include="DSPMath.h" />
+    <ClInclude Include="FFTPlan.h" />
+    <ClInclude Include="DSPTypeTraits.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

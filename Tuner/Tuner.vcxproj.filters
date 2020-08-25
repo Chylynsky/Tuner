@@ -207,7 +207,9 @@
   <ItemGroup>
     <None Include="PropertySheet.props" />
     <None Include="Tuner_TemporaryKey.pfx" />
-    <None Include="libfftw3f-3.dll" />
     <None Include="packages.config" />
+    <None Include="..\DSP\Dependencies\FFTW\x64\libfftw3f-3.dll" />
+    <None Include="..\DSP\Dependencies\FFTW\x64\libfftw3l-3.dll" />
+    <None Include="..\DSP\Dependencies\FFTW\x64\libfftw3-3.dll" />
   </ItemGroup>
 </Project>

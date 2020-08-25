@@ -11,10 +11,14 @@ namespace winrt::Tuner::implementation
         using DotArray = std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>;
         using sample_t = AudioInput::sample_t;
 
-        enum class InitializationStatus {
-            Failure,
-            Success
-        };
+        static constexpr uint32_t s_audioBufferSize = AudioInput::s_audioBufferSize;
+        static constexpr uint32_t s_filterSize = 4096U;
+
+        static constexpr float s_baseNoteFrequency = 440.0f;
+
+        // PitchANalyzer filter parameters
+        static constexpr float s_minFrequency = 80.0f;
+        static constexpr float s_maxFrequency = 1200.0f;
 
         enum class MainPageState {
             Loading,
@@ -30,9 +34,9 @@ namespace winrt::Tuner::implementation
             static winrt::Windows::UI::Xaml::Media::SolidColorBrush Green() noexcept;
         };
 
-        AudioInput audioInput;
-		PitchAnalyzer<AudioInput::AUDIO_BUFFER_SIZE, 1 << 12, AudioInput::sample_t> pitchAnalyzer;
-        DotArray dots;
+        AudioInput m_audioInput;
+		PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t> m_pitchAnalyzer;
+        DotArray m_dotArray;
 
         MainPage();
         ~MainPage();
@@ -41,7 +45,7 @@ namespace winrt::Tuner::implementation
         void MyProperty(int32_t value);
 
         winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
-        std::future<InitializationStatus> InitializeFunctionality();
+        winrt::Windows::Foundation::IAsyncOperation<bool> InitializeFunctionality();
 
         /*
         *	Function serves as a callback to the PitchAnalyzer objects' SoundAnalyzed event.

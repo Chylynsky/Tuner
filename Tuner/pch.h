@@ -17,7 +17,6 @@
 #include <winrt/Windows.UI.Xaml.Media.h>
 #include <winrt/Windows.UI.Xaml.Media.Animation.h>
 
-#include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Media.h>
 #include <winrt/Windows.Media.Audio.h>
 #include <winrt/Windows.Media.Capture.h>
@@ -48,4 +47,3 @@
 #include <type_traits>
 #include <sstream>
 #include <execution>
-#include "fftw3.h"
