@@ -132,15 +132,9 @@ namespace DSP
 		{
 		};
 
-		FFTPlan(FFTPlan&& fftPlan) : m_fftPlan{ nullptr }
+		FFTPlan(FFTPlan&& other) : m_fftPlan{ nullptr }
 		{
-			if (m_fftPlan)
-			{
-				DestroyPlan();
-			}
-
-			m_fftPlan = fftPlan.m_fftPlan;
-			fftPlan.m_fftPlan = nullptr;
+			*this = std::move(other);
 		}
 
 		template<typename _InIt1, typename _InIt2>
@@ -176,14 +170,18 @@ namespace DSP
 			}
 		}
 
-		FFTPlan& operator=(FFTPlan&& fftPlan)
+		FFTPlan& operator=(FFTPlan&& other)
 		{
-			if (m_fftPlan)
+			if (this != &other)
 			{
-				DestroyPlan();
+				if (m_fftPlan)
+				{
+					DestroyPlan();
+				}
+				m_fftPlan = other.m_fftPlan;
+				other.m_fftPlan = nullptr;
 			}
-			m_fftPlan = fftPlan.m_fftPlan;
-			fftPlan.m_fftPlan = nullptr;
+
 			return *this;
 		}
 

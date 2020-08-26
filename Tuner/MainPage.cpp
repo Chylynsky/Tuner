@@ -14,7 +14,7 @@ using namespace Windows::System;
 
 namespace winrt::Tuner::implementation
 {
-	MainPage::MainPage() : m_pitchAnalyzer{ s_baseNoteFrequency, s_minFrequency, s_maxFrequency, 0.0f }
+	MainPage::MainPage() : m_audioInput{}, m_pitchAnalyzer{ s_minFrequency, s_maxFrequency, s_baseNoteFrequency }
     {
         InitializeComponent();
 
@@ -62,17 +62,21 @@ namespace winrt::Tuner::implementation
 		co_await SetStateAsync(MainPageState::Tuning);
 	}
 
+	void MainPage::Page_Unloaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e)
+	{
+
+	}
+
 	IAsyncOperation<bool> MainPage::InitializeFunctionality()
 	{
-		AudioInputInitializationStatus initStatus = co_await m_audioInput.InitializeAsync();
+		bool initStatus = co_await m_audioInput.InitializeAsync();
 
-		if (initStatus != AudioInputInitializationStatus::Success) 
+		if (!initStatus) 
 		{
 			co_return false;
 		}
 
-		// Sampling frequency must be set before performing any analysis
-		m_pitchAnalyzer.SetSamplingFrequency(static_cast<float>(m_audioInput.GetSampleRate()));
+		m_pitchAnalyzer.SetSamplingFrequency(m_audioInput.GetSampleRate());
 
 		// Set sound analyzed callback
 		m_pitchAnalyzer.SoundAnalyzed([this](const std::string& note, float frequency, float cents) { 
@@ -106,7 +110,7 @@ namespace winrt::Tuner::implementation
 			ColorForeground(6, 6, Color::Green());
 		}
 
-		// Notes above the desired frequency
+		// Notes above the desiRed() frequency
 		else if (cents > 2.0f && cents <= 5.0f) {
 			ColorForeground(6, 7, Color::Green());
 		}
@@ -129,7 +133,7 @@ namespace winrt::Tuner::implementation
 			ColorForeground(6, 12, Color::Red());
 		}
 
-		// Notes below the desired frequency
+		// Notes below the desiRed() frequency
 		else if (cents < -2.0f && cents >= -5.0f) {
 			ColorForeground(5, 6, Color::Green());
 		}

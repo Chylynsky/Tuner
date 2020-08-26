@@ -1,4 +1,5 @@
 #pragma once
+#include "DSPTypeTraits.h"
 
 namespace DSP
 {
@@ -17,5 +18,16 @@ namespace DSP
 	inline T omega_norm(T f, T fs) noexcept
 	{
 		return static_cast<T>(2) * pi<T> * f / fs;
+	}
+
+	template<typename _FwdIt1, typename _FwdIt2, typename _FwdIt3>
+	inline void MultiplyPointwise(_FwdIt1 first1, _FwdIt1 last1, _FwdIt2 first2, _FwdIt3 dest)
+	{
+		using value_t = Iterator_value_type<_FwdIt1>;
+
+		static_assert(Is_same<value_t, Iterator_value_type<_FwdIt2>>, "Different value types.");
+		static_assert(Is_same<value_t, Iterator_value_type<_FwdIt3>>, "Different value types.");
+
+		std::transform(std::execution::par, first1, last1, first2, dest, std::multiplies<value_t>());
 	}
 }

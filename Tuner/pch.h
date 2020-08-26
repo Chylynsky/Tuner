@@ -28,6 +28,7 @@
 
 #include <array>
 #include <algorithm>
+#include <execution>
 #include <thread>
 #include <chrono>
 #include <vector>
@@ -36,6 +37,8 @@
 #include <iterator>
 #include <string>
 #include <cmath>
+#include <exception>
+#include <stdexcept>
 #include <limits>
 #include <functional>
 #include <cstdlib>
@@ -46,4 +49,4 @@
 #include <future>
 #include <type_traits>
 #include <sstream>
-#include <execution>
+#include <memory>

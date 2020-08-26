@@ -4,13 +4,7 @@ namespace winrt::Tuner::implementation
 {
 	MIDL_INTERFACE("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D") IMemoryBufferByteAccess : ::IUnknown
 	{
-		virtual HRESULT __stdcall GetBuffer(unsigned char** value, unsigned int* capacity);
-	};
-
-	enum class AudioInputInitializationStatus
-	{
-		Failure,
-		Success
+		virtual HRESULT __stdcall GetBuffer(unsigned char** value, unsigned int* capacity) = 0;
 	};
 
 	class AudioInput
@@ -57,7 +51,7 @@ namespace winrt::Tuner::implementation
 		AudioInput();
 
 		// Get an instance of AudioInput class
-		std::future<AudioInputInitializationStatus> InitializeAsync();
+		winrt::Windows::Foundation::IAsyncOperation<bool> InitializeAsync();
 		// Start recording audio data
 		void Start() const noexcept;
 		// Stop recording audio data

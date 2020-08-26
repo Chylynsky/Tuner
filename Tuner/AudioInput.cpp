@@ -3,6 +3,7 @@
 
 using namespace winrt;
 using namespace winrt::Windows;
+using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media;
 using namespace winrt::Windows::Media::Audio;
 using namespace winrt::Windows::Media::Capture;
@@ -14,16 +15,18 @@ using namespace winrt::Windows::Devices::Enumeration;
 namespace winrt::Tuner::implementation
 {
 	// Get an instance of AudioInput class
-	std::future<AudioInputInitializationStatus> AudioInput::InitializeAsync()
+	IAsyncOperation<bool> AudioInput::InitializeAsync()
 	{
 		// Start async operation that creates new audio graph
 		CreateAudioGraphResult graphCreation = co_await AudioGraph::CreateAsync(audioSettings);
 
 		// Check if succesfully created
-		if (graphCreation.Status() != AudioGraphCreationStatus::Success) {
-			co_return AudioInputInitializationStatus::Failure; // throw runtime_error("AudioGraph creation failed.");
+		if (graphCreation.Status() != AudioGraphCreationStatus::Success) 
+		{
+			co_return false;
 		}
-		else {
+		else 
+		{
 			// Get created graph
 			audioGraph = graphCreation.Graph();
 			// Create output node for recorded data
@@ -34,14 +37,16 @@ namespace winrt::Tuner::implementation
 			CreateAudioDeviceInputNodeResult nodeCreation = co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media);
 
 			// Check if succesful
-			if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success) {
-				co_return AudioInputInitializationStatus::Failure; // throw runtime_error("AudioDeviceInputNode creation failed.");
+			if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success) 
+			{
+				co_return false;
 			}
-			else {
+			else 
+			{
 				inputDevice = nodeCreation.DeviceInputNode();
 				// Input from the recording device is routed to frameOutputNode
 				inputDevice.AddOutgoingConnection(frameOutputNode);
-				co_return AudioInputInitializationStatus::Success;
+				co_return true;
 			}
 		}
 	}
