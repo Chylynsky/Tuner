@@ -8,10 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="WindowGenerator.cpp" />
-    <ClCompile Include="FilterGenerator.cpp" />
-    <ClCompile Include="FFTPlan.cpp" />
-    <ClCompile Include="DSPTypeTraits.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

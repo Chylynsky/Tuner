@@ -1,4 +1,7 @@
 #pragma once
+#include <algorithm>
+#include <cmath>
+#include <execution>
 #include "DSPTypeTraits.h"
 
 namespace DSP

@@ -207,7 +207,7 @@ namespace winrt::Tuner::implementation
 		void Analyze(sample_t* first, sample_t* last) noexcept
 		{
 			// Object must be properly initialized
-			WINRT_ASSERT(!m_initialized);
+			WINRT_ASSERT(m_initialized);
 			// SoundAnalyzed callback must be attached before performing analysis.
 			WINRT_ASSERT(m_soundAnalyzedCallback);
 

@@ -1,4 +1,7 @@
 #pragma once
+#include <iterator>
+#include <type_traits>
+#include <complex>
 #include "fftw3.h"
 
 namespace DSP

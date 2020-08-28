@@ -2,8 +2,11 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.h>
 #include <hstring.h>
-#include "DSPTypeTraits.h"
+#include <cstdint>
+#include <string>
+#include <utility>
 #include "fftw3.h"
+#include "DSPTypeTraits.h"
 
 namespace DSP
 {
