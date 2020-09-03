@@ -72,25 +72,29 @@ namespace winrt::Tuner::implementation
 		DSP::FFTPlan<sample_t>	m_fftPlan;
 
 		// Frequencies and notes that represents them are stored in std::map<float, std::string>
-		NoteFrequenciesMap		m_noteFrequencies;
+		NoteFrequenciesMap		m_noteFrequenciesMap;
 
 		bool					m_initialized;
 
 	public:
 
-		PitchAnalyzer(float minFrequency, float maxFrequency, float baseFrequency = 0.0f, float samplingFrequency = 0.0f) :
-			m_baseToneFrequency	{ baseFrequency }, 
+		PitchAnalyzer(float minFrequency, float maxFrequency, float baseToneFrequency = 0.0f, float samplingFrequency = 0.0f) :
+			m_baseToneFrequency	{ baseToneFrequency }, 
 			m_minFrequency		{ minFrequency }, 
 			m_maxFrequency		{ maxFrequency }, 
 			m_initialized		{ false }
 		{
 			// Allow for initializing values of sampling frequency and base note frequency later
 			
-			WINRT_ASSERT(samplingFrequency >= 0.0f);
-			m_samplingFrequency = samplingFrequency;
+			if (samplingFrequency > 0.0f)
+			{
+				SetSamplingFrequency(samplingFrequency);
+			}
 
-			WINRT_ASSERT(baseFrequency >= 0.0f);
-			m_noteFrequencies = std::move(InitializeNoteFrequenciesMap());
+			if (baseToneFrequency > 0.0f)
+			{
+				SetBaseToneFrequency(baseToneFrequency);
+			}
 
 			// Pad arrays with zeros
 			m_filterCoeff.fill(0.0f);
@@ -108,19 +112,103 @@ namespace winrt::Tuner::implementation
 		
 		// Set sampling frequency of the audio input device. This step
 		// is neccessary to make sure the calculations performed are accurate.
-		// Default value is 44.1kHz.
 		void SetSamplingFrequency(float samplingFrequency)
 		{
-			WINRT_ASSERT(samplingFrequency > 0.0f);
-			m_samplingFrequency = samplingFrequency;
+			if (samplingFrequency > 0.0f)
+			{
+				m_samplingFrequency = samplingFrequency;
+			}
+			else
+			{
+				// Sampling frequency must be positive
+				WINRT_ASSERT(0);
+			}
 		}
 		
 		// Set base tone frequency.
-		void SetBaseToneFrequency(float baseToneFrequency)
+		void SetBaseToneFrequency(float baseToneFrequency) noexcept
 		{
-			WINRT_ASSERT(baseToneFrequency > 0.0f);
-			m_baseToneFrequency = baseToneFrequency;
-			m_noteFrequencies = std::move(InitializeNoteFrequenciesMap());
+			if (baseToneFrequency > 0.0f)
+			{
+				m_baseToneFrequency = baseToneFrequency;
+				m_noteFrequenciesMap = std::move(InitializeNoteFrequenciesMap());
+			}
+			else
+			{
+				// Base tone frequency must be positive
+				WINRT_ASSERT(0);
+			}
+		}
+
+		void SetMinFrequency(float minFrequency) noexcept
+		{
+			if (minFrequency >= 0.0f)
+			{
+				m_minFrequency = minFrequency;
+				
+				if (m_baseToneFrequency > 0.0f)
+				{
+					m_noteFrequenciesMap = std::move(InitializeNoteFrequenciesMap());
+				}
+
+				if (m_samplingFrequency > 0.0f)
+				{
+					GenerateNewFilter();
+				}
+			}
+			else
+			{
+				// Bad value
+				WINRT_ASSERT(0);
+			}
+		}
+
+		void SetMaxFrequency(float maxFrequency) noexcept
+		{
+			if (maxFrequency >= 0.0f)
+			{
+				m_maxFrequency = maxFrequency;
+				m_noteFrequenciesMap = std::move(InitializeNoteFrequenciesMap());
+				
+				if (m_baseToneFrequency > 0.0f)
+				{
+					m_noteFrequenciesMap = std::move(InitializeNoteFrequenciesMap());
+				}
+
+				if (m_samplingFrequency > 0.0f)
+				{
+					GenerateNewFilter();
+				}
+			}
+			else
+			{
+				// Bad value
+				WINRT_ASSERT(0);
+			}
+		}
+
+		void SetFrequencyRange(float minFrequency, float maxFrequency)
+		{
+			if (minFrequency >= 0.0f && maxFrequency > 0.0f && maxFrequency > minFrequency)
+			{
+				m_minFrequency = minFrequency;
+				m_maxFrequency = maxFrequency;
+
+				if (m_baseToneFrequency > 0.0f)
+				{
+					m_noteFrequenciesMap = std::move(InitializeNoteFrequenciesMap());
+				}
+
+				if (m_samplingFrequency > 0.0f)
+				{
+					GenerateNewFilter();
+				}
+			}
+			else
+			{
+				// Bad values
+				WINRT_ASSERT(0);
+			}
 		}
 		
 		// Attach function that gets called when sound analysis is completed
@@ -133,22 +221,27 @@ namespace winrt::Tuner::implementation
 		// Deduce the best performant FFT algorithm or, if possible, load it from file
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync()
 		{
-			// Sampling frequency must be set before initialization
+			// Sampling frequency and base tone frequency must be set before initialization
 			WINRT_ASSERT(m_samplingFrequency > 0.0f);
+			WINRT_ASSERT(m_baseToneFrequency > 0.0f);
+			WINRT_ASSERT(!m_noteFrequenciesMap.empty());
 
-			// Check if FFT plan was created earlier
-			bool loadFFTResult = co_await DSP::FFTPlan<sample_t>::LoadFFTPlan(L"fft_plan.bin");
-
-			auto InitializeFFTPlan = [this](DSP::flags _flags) {
-				return DSP::FFTPlan<sample_t>(m_filterCoeff.begin(), m_filterCoeff.end(), m_filterFreqResponse.begin(), _flags);
-			};
-
-			m_fftPlan = InitializeFFTPlan(DSP::flags::wisdom);
-
-			if (!m_fftPlan)
+			if (!m_initialized)
 			{
-				m_fftPlan = InitializeFFTPlan(DSP::flags::measure);
-				m_fftPlan.SaveFFTPlan(L"fft_plan.bin");
+				// Check if FFT plan was created earlier
+				bool loadFFTResult = co_await DSP::FFTPlan<sample_t>::LoadFFTPlan(L"fft_plan.bin");
+
+				auto InitializeFFTPlan = [this](DSP::flags _flags) {
+					return DSP::FFTPlan<sample_t>(m_filterCoeff.begin(), m_filterCoeff.end(), m_filterFreqResponse.begin(), _flags);
+				};
+
+				m_fftPlan = InitializeFFTPlan(DSP::flags::wisdom);
+
+				if (!m_fftPlan)
+				{
+					m_fftPlan = InitializeFFTPlan(DSP::flags::measure);
+					m_fftPlan.SaveFFTPlan(L"fft_plan.bin");
+				}
 			}
 
 			// FFT plan should be valid at this point
@@ -188,7 +281,7 @@ namespace winrt::Tuner::implementation
 			// SoundAnalyzed callback must be attached before performing analysis.
 			WINRT_ASSERT(m_soundAnalyzedCallback);
 
-			// Get helper pointers
+			// Get helper iterators
 			auto filterFreqResponseFirst	= m_filterFreqResponse.begin();
 			auto fftResultFirst				= m_fftResult.begin();
 			auto fftResultLast				= std::next(fftResultFirst, s_fftResultSize);
@@ -313,7 +406,7 @@ namespace winrt::Tuner::implementation
 		PitchAnalysisResult GetNote(float frequency) const noexcept
 		{
 			// Get the nearest note above or equal
-			auto high = m_noteFrequencies.lower_bound(frequency);
+			auto high = m_noteFrequenciesMap.lower_bound(frequency);
 			// Get the nearest note below
 			auto low = std::prev(high);
 
@@ -329,6 +422,20 @@ namespace winrt::Tuner::implementation
 			{
 				return { (*low).second, 1200.0f * std::log2(frequency / (*low).first) };
 			}
+		}
+
+		void GenerateNewFilter()
+		{
+			// Generate filter coefficients
+			DSP::GenerateBandPassFIR(
+				m_minFrequency,
+				m_maxFrequency,
+				m_samplingFrequency,
+				m_filterCoeff.begin(),
+				std::next(m_filterCoeff.begin(), s_filterSize),
+				DSP::WindowGenerator::WindowType::BlackmanHarris);
+
+			m_fftPlan.Execute(m_filterCoeff.begin(), m_filterCoeff.end(), m_filterFreqResponse.begin());
 		}
 
 #ifdef CREATE_MATLAB_PLOTS

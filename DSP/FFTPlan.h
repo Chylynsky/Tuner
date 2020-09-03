@@ -173,7 +173,7 @@ namespace DSP
 			}
 		}
 
-		FFTPlan& operator=(FFTPlan&& other)
+		FFTPlan& operator=(FFTPlan&& other) noexcept
 		{
 			if (this != &other)
 			{
