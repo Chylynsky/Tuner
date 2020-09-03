@@ -17,9 +17,10 @@ namespace winrt::Tuner::implementation
         static constexpr float s_minFrequency = 80.0f;
         static constexpr float s_maxFrequency = 1200.0f;
 
-        using sample_t          = AudioInput::sample_t;
-        using DotArray          = std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>;
-        using PitchAnalyzer     = PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>;
+        using sample_t              = AudioInput::sample_t;
+        using AudioBufferIterator   = AudioInput::BufferIterator;
+        using DotArray              = std::array<winrt::Windows::UI::Xaml::Shapes::Ellipse, 13>;
+        using PitchAnalyzer         = PitchAnalyzer<s_audioBufferSize, s_filterSize, sample_t>;
 
         enum class MainPageState {
             Loading,

@@ -11,22 +11,23 @@ namespace winrt::Tuner::implementation
 	{
 	public:
 
-		static constexpr uint32_t s_audioBufferSize{ 131072U };
-		static constexpr uint32_t s_sampleBufferCount{ 4U };
+		static constexpr size_t s_audioBufferSize{ 131072U };
+		static constexpr size_t s_sampleBufferCount{ 4U };
 
 		using sample_t				= float;
 		using SampleBuffer			= std::array<sample_t, s_audioBufferSize>;
+		using BufferIterator		= SampleBuffer::iterator;
 		using SampleBufferQueue		= std::queue<SampleBuffer*>;
 		using SampleBufferArray		= std::array<SampleBuffer, s_sampleBufferCount>;
-		using BufferFilledCallback	= std::function<void(sample_t* first, sample_t* last)>;
+		using BufferFilledCallback	= std::function<void(BufferIterator first, BufferIterator last)>;
 		using AsyncCallbackQueue	= std::queue<std::future<void>>;
 
 	private:
 
 		// BufferFilled event handler
-		BufferFilledCallback bufferFilledCallback;
+		BufferFilledCallback	bufferFilledCallback;
 		// Keep std::futures with asynchronously running callbacks in a queue form
-		AsyncCallbackQueue asyncCallbackQueue;
+		AsyncCallbackQueue		asyncCallbackQueue;
 
 		winrt::Windows::Media::Audio::AudioGraph			audioGraph;
 		winrt::Windows::Media::Audio::AudioGraphSettings	audioSettings;
@@ -37,14 +38,14 @@ namespace winrt::Tuner::implementation
 		SampleBufferQueue	sampleBufferQueue;
 		SampleBuffer*		sampleBufferPtr;
 
-		// Helper pointers
-		sample_t* first;
-		sample_t* last;
-		sample_t* current;
+		// Helper iterators
+		BufferIterator first;
+		BufferIterator last;
+		BufferIterator current;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 		void SwapBuffers();
-		void RunCallbackAsync(sample_t* ptrFirst, sample_t* ptrLast);
+		void RunCallbackAsync();
 
 	public:
 
@@ -67,15 +68,15 @@ namespace winrt::Tuner::implementation
 		uint32_t GetBitDepth() const;
 	};
 
-	inline void AudioInput::RunCallbackAsync(sample_t* ptrFirst, sample_t* ptrLast)
+	inline void AudioInput::RunCallbackAsync()
 	{
 		asyncCallbackQueue.pop();
 		asyncCallbackQueue.push(std::async(
 			std::launch::async,
-			[this, ptrFirst, ptrLast]() {
-				bufferFilledCallback(ptrFirst, ptrLast);
-			})
-		);
+			[this]()
+			{
+				bufferFilledCallback(sampleBufferPtr->begin(), sampleBufferPtr->end());
+			}));
 	}
 
 	inline void AudioInput::Start() const noexcept

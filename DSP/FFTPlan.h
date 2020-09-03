@@ -20,7 +20,7 @@ namespace DSP
 		{
 			s_refCount--;
 
-			if (!s_refCount)
+			if (s_refCount == 0U)
 			{
 				if constexpr (Is_float<_Ty>)
 				{
@@ -39,7 +39,7 @@ namespace DSP
 	};
 
 	template<typename _Ty>
-	uint32_t FFTManager<_Ty>::s_refCount = 0;
+	uint32_t FFTManager<_Ty>::s_refCount = 0U;
 
 	enum class flags
 	{

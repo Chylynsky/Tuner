@@ -23,14 +23,14 @@
 
 namespace winrt::Tuner::implementation
 {
-	template <uint32_t s_audioBufferSize, uint32_t s_filterSize, typename sample_t = float>
-	struct PitchAnalyzer
+	template<size_t s_audioBufferSize, size_t s_filterSize, typename sample_t = float>
+	class PitchAnalyzer
 	{
 		static_assert(Is_positive_power_of_2(s_audioBufferSize), "Audio buffer size must be a power of 2.");
 		static_assert(Is_positive_power_of_2(s_filterSize), "Filter size must be a power of 2.");
 
-		static constexpr uint32_t s_filteredSignalSize = s_audioBufferSize + s_filterSize - 1U;
-		static constexpr uint32_t s_fftResultSize = s_filteredSignalSize / 2U + 1U;
+		static constexpr size_t s_filteredSignalSize	= s_audioBufferSize + s_filterSize - 1U;
+		static constexpr size_t s_fftResultSize			= s_filteredSignalSize / 2U + 1U;
 
 		// Type aliases
 		using complex_t				= std::complex<sample_t>;
@@ -39,8 +39,6 @@ namespace winrt::Tuner::implementation
 		using FFTResultBuffer		= std::array<complex_t, s_fftResultSize>;
 		using NoteFrequenciesMap	= std::map<sample_t, std::string>;
 		using SoundAnalyzedCallback = std::function<void(const std::string& note, float frequency, float cents)>;
-
-	private:
 
 		// Struct holding the result of each, returned from GetNote() function.
 		struct PitchAnalysisResult
@@ -81,22 +79,17 @@ namespace winrt::Tuner::implementation
 	public:
 
 		PitchAnalyzer(float minFrequency, float maxFrequency, float baseFrequency = 0.0f, float samplingFrequency = 0.0f) :
-			m_baseToneFrequency{ baseFrequency }, m_minFrequency{ minFrequency }, m_maxFrequency{ maxFrequency }, m_initialized{ false }
+			m_baseToneFrequency	{ baseFrequency }, 
+			m_minFrequency		{ minFrequency }, 
+			m_maxFrequency		{ maxFrequency }, 
+			m_initialized		{ false }
 		{
-			// Allow for initializing values later
+			// Allow for initializing values of sampling frequency and base note frequency later
 			
-			if (samplingFrequency < 0.0f)
-			{
-				throw std::runtime_error("Bad sampling frequency value.");
-			}
-
+			WINRT_ASSERT(samplingFrequency >= 0.0f);
 			m_samplingFrequency = samplingFrequency;
 
-			if (baseFrequency < 0.0f)
-			{
-				throw std::runtime_error("Bad base note frequency value.");
-			}
-
+			WINRT_ASSERT(baseFrequency >= 0.0f);
 			m_noteFrequencies = std::move(InitializeNoteFrequenciesMap());
 
 			// Pad arrays with zeros
@@ -104,38 +97,28 @@ namespace winrt::Tuner::implementation
 			m_windowCoeffBuffer.fill(0.0f);
 		}
 
-		PitchAnalyzer() = delete;
-		PitchAnalyzer(PitchAnalyzer&&) = delete;
+		PitchAnalyzer()						= delete;
+		PitchAnalyzer(PitchAnalyzer&&)		= delete;
 		PitchAnalyzer(const PitchAnalyzer&) = delete;
 
-		~PitchAnalyzer() 
-		{
-		}
+		~PitchAnalyzer() = default;
 
-		PitchAnalyzer& operator=(PitchAnalyzer&&) = delete;
-		PitchAnalyzer& operator=(const PitchAnalyzer&) = delete;
+		PitchAnalyzer& operator=(PitchAnalyzer&&)		= delete;
+		PitchAnalyzer& operator=(const PitchAnalyzer&)	= delete;
 		
 		// Set sampling frequency of the audio input device. This step
 		// is neccessary to make sure the calculations performed are accurate.
 		// Default value is 44.1kHz.
 		void SetSamplingFrequency(float samplingFrequency)
 		{
-			if (samplingFrequency <= 0.0f)
-			{
-				throw std::runtime_error("Bad sampling frequency value.");
-			}
-
-			this->m_samplingFrequency = samplingFrequency;
+			WINRT_ASSERT(samplingFrequency > 0.0f);
+			m_samplingFrequency = samplingFrequency;
 		}
 		
 		// Set base tone frequency.
 		void SetBaseToneFrequency(float baseToneFrequency)
 		{
-			if (baseFrequency <= 0.0f)
-			{
-				throw std::runtime_error("Bad base note frequency value.");
-			}
-
+			WINRT_ASSERT(baseToneFrequency > 0.0f);
 			m_baseToneFrequency = baseToneFrequency;
 			m_noteFrequencies = std::move(InitializeNoteFrequenciesMap());
 		}
@@ -143,24 +126,15 @@ namespace winrt::Tuner::implementation
 		// Attach function that gets called when sound analysis is completed
 		void SoundAnalyzed(SoundAnalyzedCallback soundAnalyzedCallback) noexcept
 		{
-			// soundAnalyzedCallback should be valid at this point
-			if (!soundAnalyzedCallback)
-			{
-				WINRT_ASSERT(0);
-				return;
-			}
-
-			this->m_soundAnalyzedCallback = soundAnalyzedCallback;
+			WINRT_ASSERT(soundAnalyzedCallback);
+			m_soundAnalyzedCallback = soundAnalyzedCallback;
 		}
 
 		// Deduce the best performant FFT algorithm or, if possible, load it from file
 		winrt::Windows::Foundation::IAsyncAction InitializeAsync()
 		{
 			// Sampling frequency must be set before initialization
-			if (m_samplingFrequency <= 0.0f)
-			{
-				throw std::runtime_error("Sampling frequency not set.");
-			}
+			WINRT_ASSERT(m_samplingFrequency > 0.0f);
 
 			// Check if FFT plan was created earlier
 			bool loadFFTResult = co_await DSP::FFTPlan<sample_t>::LoadFFTPlan(L"fft_plan.bin");
@@ -177,7 +151,7 @@ namespace winrt::Tuner::implementation
 				m_fftPlan.SaveFFTPlan(L"fft_plan.bin");
 			}
 
-			// FFTW plan should be valid at this point
+			// FFT plan should be valid at this point
 			WINRT_ASSERT(m_fftPlan);
 
 			// Generate filter coefficients
@@ -189,11 +163,13 @@ namespace winrt::Tuner::implementation
 				std::next(m_filterCoeff.begin(), s_filterSize),
 				DSP::WindowGenerator::WindowType::BlackmanHarris);
 
+			// Generate window coefficients
 			DSP::WindowGenerator::Generate(
 				DSP::WindowGenerator::WindowType::BlackmanHarris,
 				m_windowCoeffBuffer.begin(),
 				m_windowCoeffBuffer.end());
 
+			// Execute FFT for generated filter
 			m_fftPlan.Execute();
 			m_initialized = true;
 
@@ -204,7 +180,8 @@ namespace winrt::Tuner::implementation
 
 		// Function performs harmonic analysis on input signal and calls the callback function
 		// for each analysis performed.
-		void Analyze(sample_t* first, sample_t* last) noexcept
+		template<typename _FwdIt>
+		void Analyze(_FwdIt first, _FwdIt last) noexcept
 		{
 			// Object must be properly initialized
 			WINRT_ASSERT(m_initialized);
@@ -212,12 +189,13 @@ namespace winrt::Tuner::implementation
 			WINRT_ASSERT(m_soundAnalyzedCallback);
 
 			// Get helper pointers
-			complex_t* filterFreqResponseFirst = m_filterFreqResponse.data();
-			complex_t* fftResultFirst = m_fftResult.data();
-			complex_t* fftResultLast = fftResultFirst + s_fftResultSize;
+			auto filterFreqResponseFirst	= m_filterFreqResponse.begin();
+			auto fftResultFirst				= m_fftResult.begin();
+			auto fftResultLast				= std::next(fftResultFirst, s_fftResultSize);
+			auto windowCoeffBufferFirst		= m_windowCoeffBuffer.begin();
 
 			// Apply window function before FFT
-			DSP::MultiplyPointwise(first, last, m_windowCoeffBuffer.begin(), first);
+			DSP::MultiplyPointwise(first, last, windowCoeffBufferFirst, first);
 
 			// Execute FFT on the input signal
 			m_fftPlan.Execute(first, last, fftResultFirst);
@@ -236,7 +214,7 @@ namespace winrt::Tuner::implementation
 			// Check if frequency of the peak is in the requested range
 			if (firstHarmonic >= m_minFrequency && firstHarmonic <= m_maxFrequency)
 			{
-				PitchAnalysisResult measurement{ GetNote(firstHarmonic) };
+				PitchAnalysisResult measurement = GetNote(firstHarmonic);
 				m_soundAnalyzedCallback(measurement.note, firstHarmonic, measurement.cents);
 			}
 		}
@@ -249,13 +227,14 @@ namespace winrt::Tuner::implementation
 			constexpr std::array<const char*, 12> octave{ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
 			// Constant needed for note frequencies calculation
-			const float a = pow(2.0f, 1.0f / 12.0f);
-			const auto baseNoteIter{ std::next(octave.begin(), 9) };
+			const float a			= pow(2.0f, 1.0f / 12.0f);
+			const auto baseNoteIter	= std::next(octave.begin(), 9);
 
-			auto octaveIter{ baseNoteIter };
-			float currentFrequency{ m_baseToneFrequency };
-			int currentOctave{ 4 };
-			int halfSteps{ 0 };
+			auto octaveIter			= baseNoteIter;
+			float currentFrequency	= m_baseToneFrequency;
+			int currentOctave		= 4;
+			int halfSteps			= 0;
+
 			NoteFrequenciesMap result;
 
 			// Fill a map for notes below  A4
@@ -275,9 +254,9 @@ namespace winrt::Tuner::implementation
 			}
 
 			// Set iterator to one half-step above A4
-			octaveIter = std::next(baseNoteIter, 1);
-			halfSteps = 1;
-			currentOctave = 4;
+			octaveIter		= std::next(baseNoteIter, 1);
+			halfSteps		= 1;
+			currentOctave	= 4;
 
 			// Fill a map for notes above and equal A4
 			while (currentFrequency <= m_maxFrequency) {
@@ -297,11 +276,12 @@ namespace winrt::Tuner::implementation
 			return result;
 		}
 
+		// Analyze FFT result and find the base tone frequency
 		template<typename _InIt>
 		float HarmonicProductSpectrum(_InIt first, _InIt last) const noexcept
 		{
-			using value_t = typename std::iterator_traits<_InIt>::value_type;
-			using diff_t = typename std::iterator_traits<_InIt>::difference_type;
+			using value_t	= typename std::iterator_traits<_InIt>::value_type;
+			using diff_t	= typename std::iterator_traits<_InIt>::difference_type;
 
 			// Number of samples
 			static const diff_t N = std::distance(first, last);
@@ -312,12 +292,14 @@ namespace winrt::Tuner::implementation
 			// Index of the sample representing lower frequency bound
 			diff_t n = static_cast<diff_t>(m_minFrequency) * N / static_cast<diff_t>(m_samplingFrequency);
 			auto highestSumIndex = std::make_pair(0.0f, 0.0f);
+
 			for (; std::distance(std::next(first, 3 * n), maxFreqIter) > 0; n++)
 			{
 				auto currentSumIndex = std::make_pair(
 					std::abs(*std::next(first, n)) *
 					std::abs(*std::next(first, 2 * n)) *
 					std::abs(*std::next(first, 3 * n)), n);
+
 				if (currentSumIndex.first > highestSumIndex.first)
 				{
 					highestSumIndex = currentSumIndex;
@@ -384,8 +366,8 @@ namespace winrt::Tuner::implementation
 			sstr << "ylabel('Magnitude [dB]')" << std::endl;
 			sstr << "title('FIR filter transfer function')" << std::endl;
 
-			StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
-			StorageFile file{ co_await storageFolder.CreateFileAsync(L"filter_log.m", CreationCollisionOption::ReplaceExisting) };
+			StorageFolder storageFolder = ApplicationData::Current().LocalFolder();
+			StorageFile file = co_await storageFolder.CreateFileAsync(L"filter_log.m", CreationCollisionOption::ReplaceExisting);
 			co_await FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
 	}
 
@@ -431,8 +413,8 @@ namespace winrt::Tuner::implementation
 			sstr << "ylabel('Magnitude [dB]')" << std::endl;
 			sstr << "title('Filtered input signal amplitude spectrum')" << std::endl;
 
-			StorageFolder storageFolder{ ApplicationData::Current().LocalFolder() };
-			StorageFile file{ co_await storageFolder.CreateFileAsync(L"analysis_log.m", CreationCollisionOption::ReplaceExisting) };
+			StorageFolder storageFolder = ApplicationData::Current().LocalFolder();
+			StorageFile file = co_await storageFolder.CreateFileAsync(L"analysis_log.m", CreationCollisionOption::ReplaceExisting);
 			co_await FileIO::WriteTextAsync(file, to_hstring(sstr.str()));
 		}
 #endif

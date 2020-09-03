@@ -67,16 +67,18 @@ namespace winrt::Tuner::implementation
 
 		WINRT_ASSERT(byte);
 		
-		if (current + buffer.Length() < last) {
+		if (current + buffer.Length() < last) 
+		{
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
 			current += buffer.Length() / sizeof(sample_t);
 		}
-		else {
+		else 
+		{
 			auto distance = last - current;
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
 			current += buffer.Length() / sizeof(sample_t);
 
-			RunCallbackAsync(first, current);
+			RunCallbackAsync();
 			SwapBuffers();
 		}
 	}
@@ -86,16 +88,16 @@ namespace winrt::Tuner::implementation
 		sampleBufferQueue.push(sampleBufferPtr);
 		sampleBufferPtr = sampleBufferQueue.front();
 		sampleBufferQueue.pop();
-		first = current = sampleBufferPtr->data();
-		last = first + sampleBufferPtr->size();
+		first = current = sampleBufferPtr->begin();
+		last = sampleBufferPtr->end();
 	}
 
 	AudioInput::AudioInput() : 
-		bufferFilledCallback{ nullptr },
-		audioGraph{ nullptr }, 
-		audioSettings{ nullptr },
-		inputDevice{ nullptr }, 
-		frameOutputNode{ nullptr }
+		bufferFilledCallback	{ nullptr },
+		audioGraph				{ nullptr }, 
+		audioSettings			{ nullptr },
+		inputDevice				{ nullptr }, 
+		frameOutputNode			{ nullptr }
 	{
 		for (SampleBuffer& buffer : sampleBufferArray)
 		{
@@ -110,8 +112,8 @@ namespace winrt::Tuner::implementation
 
 		sampleBufferPtr = sampleBufferQueue.front();
 		sampleBufferQueue.pop();
-		first = current = sampleBufferPtr->data();
-		last = first + sampleBufferPtr->size();
+		first = current = sampleBufferPtr->begin();
+		last = sampleBufferPtr->end();
 
 		// Fill audio settings
 		audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
