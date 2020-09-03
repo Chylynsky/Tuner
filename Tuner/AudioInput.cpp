@@ -108,9 +108,10 @@ namespace winrt::Tuner::implementation
 				Push placeholder std::futures for async callback execution
 				for each sample buffer.
 			*/
-			asyncCallbackQueue.push(std::future<void>());
+			asyncCallbackQueue.push(CallbackFuture());
 		}
 
+		// Prepare pointers and iterators for incoming data
 		sampleBufferPtr = sampleBufferQueue.front();
 		sampleBufferQueue.pop();
 		first = current = sampleBufferPtr->begin();

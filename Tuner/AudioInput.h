@@ -20,7 +20,8 @@ namespace winrt::Tuner::implementation
 		using SampleBufferQueue		= std::queue<SampleBuffer*>;
 		using SampleBufferArray		= std::array<SampleBuffer, s_sampleBufferCount>;
 		using BufferFilledCallback	= std::function<void(BufferIterator first, BufferIterator last)>;
-		using AsyncCallbackQueue	= std::queue<std::future<void>>;
+		using CallbackFuture		= std::future<void>;
+		using AsyncCallbackQueue	= std::queue<CallbackFuture>;
 
 	private:
 
