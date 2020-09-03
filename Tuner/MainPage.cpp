@@ -86,7 +86,7 @@ namespace winrt::Tuner::implementation
 		co_await m_pitchAnalyzer.InitializeAsync();
 
 		// Attach BufferFilled callback function
-		m_audioInput.BufferFilled([this](AudioBufferIterator first, AudioBufferIterator last) {
+		m_audioInput.BufferFilled([this](auto first, auto last) {
 			m_pitchAnalyzer.Analyze(first, last);
 		});
 

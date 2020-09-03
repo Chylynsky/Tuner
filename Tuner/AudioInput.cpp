@@ -66,17 +66,17 @@ namespace winrt::Tuner::implementation
 		byteAccess->GetBuffer(&byte, &capacity);
 
 		WINRT_ASSERT(byte);
+
+		auto bufferSpaceLeft = std::distance(current, last);
 		
-		if (current + buffer.Length() < last) 
+		if (bufferSpaceLeft > buffer.Length())
 		{
 			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
-			current += buffer.Length() / sizeof(sample_t);
+			std::advance(current, buffer.Length() / sizeof(sample_t));
 		}
 		else 
 		{
-			auto distance = last - current;
-			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + distance), current);
-			current += buffer.Length() / sizeof(sample_t);
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + bufferSpaceLeft), current);
 
 			RunCallbackAsync();
 			SwapBuffers();
@@ -101,6 +101,7 @@ namespace winrt::Tuner::implementation
 	{
 		for (SampleBuffer& buffer : sampleBufferArray)
 		{
+			buffer.fill(0.0f);
 			sampleBufferQueue.push(&buffer);
 
 			/*

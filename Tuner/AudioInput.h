@@ -54,14 +54,12 @@ namespace winrt::Tuner::implementation
 		// Get an instance of AudioInput class
 		winrt::Windows::Foundation::IAsyncOperation<bool> InitializeAsync();
 		// Start recording audio data
-		void Start() const noexcept;
+		void Start() const;
 		// Stop recording audio data
-		void Stop() const noexcept;
+		void Stop() const;
 		// Attach buffer filled callback
 		void BufferFilled(BufferFilledCallback bufferFilledCallback) noexcept;
 
-		// Get the number of recorded samples
-		uint32_t RecordedDataSize() const noexcept;
 		// Get current sample rate
 		uint32_t GetSampleRate() const noexcept;
 		// Get current bit depth
@@ -73,18 +71,18 @@ namespace winrt::Tuner::implementation
 		asyncCallbackQueue.pop();
 		asyncCallbackQueue.push(std::async(
 			std::launch::async,
-			[this]()
-			{
+			[this]() {
 				bufferFilledCallback(sampleBufferPtr->begin(), sampleBufferPtr->end());
-			}));
+			})
+		);
 	}
 
-	inline void AudioInput::Start() const noexcept
+	inline void AudioInput::Start() const
 	{
 		audioGraph.Start();
 	}
 
-	inline void AudioInput::Stop() const noexcept
+	inline void AudioInput::Stop() const
 	{
 		audioGraph.Stop();
 	}
@@ -92,12 +90,6 @@ namespace winrt::Tuner::implementation
 	inline void AudioInput::BufferFilled(BufferFilledCallback callback) noexcept
 	{
 		this->bufferFilledCallback = callback;
-	}
-
-	// Get the number of recorded samples
-	inline uint32_t AudioInput::RecordedDataSize() const noexcept
-	{
-		return static_cast<uint32_t>(current - first);
 	}
 
 	// Get current sample rate
