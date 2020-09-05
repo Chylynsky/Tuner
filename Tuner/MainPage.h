@@ -47,7 +47,7 @@ namespace winrt::Tuner::implementation
 
         winrt::Windows::Foundation::IAsyncAction Page_Loaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         void Page_Unloaded(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
-        winrt::Windows::Foundation::IAsyncOperation<bool> InitializeFunctionality();
+        winrt::Windows::Foundation::IAsyncOperation<bool> InitializeAsync();
 
         /*
         *	Function serves as a callback to the PitchAnalyzer objects' SoundAnalyzed event.

@@ -79,7 +79,8 @@ namespace winrt::Tuner::implementation
 	public:
 
 		PitchAnalyzer(float minFrequency, float maxFrequency, float baseToneFrequency = 0.0f, float samplingFrequency = 0.0f) :
-			m_baseToneFrequency	{ baseToneFrequency }, 
+			m_baseToneFrequency	{ baseToneFrequency },
+			m_samplingFrequency	{ samplingFrequency },
 			m_minFrequency		{ minFrequency }, 
 			m_maxFrequency		{ maxFrequency }, 
 			m_initialized		{ false }
@@ -219,12 +220,14 @@ namespace winrt::Tuner::implementation
 		}
 
 		// Deduce the best performant FFT algorithm or, if possible, load it from file
-		winrt::Windows::Foundation::IAsyncAction InitializeAsync()
+		winrt::Windows::Foundation::IAsyncOperation<bool> InitializeAsync()
 		{
 			// Sampling frequency and base tone frequency must be set before initialization
-			WINRT_ASSERT(m_samplingFrequency > 0.0f);
-			WINRT_ASSERT(m_baseToneFrequency > 0.0f);
-			WINRT_ASSERT(!m_noteFrequenciesMap.empty());
+			if (m_samplingFrequency <= 0.0f || m_baseToneFrequency <= 0.0f || m_noteFrequenciesMap.empty())
+			{
+				WINRT_ASSERT(0);
+				co_return false;
+			}
 
 			if (!m_initialized)
 			{
@@ -245,7 +248,11 @@ namespace winrt::Tuner::implementation
 			}
 
 			// FFT plan should be valid at this point
-			WINRT_ASSERT(m_fftPlan);
+			if (!m_fftPlan)
+			{
+				WINRT_ASSERT(0);
+				co_return false;
+			}
 
 			// Generate filter coefficients
 			DSP::GenerateBandPassFIR(
@@ -269,6 +276,7 @@ namespace winrt::Tuner::implementation
 #ifdef CREATE_MATLAB_PLOTS
 			ExportFilterMatlab();
 #endif
+			co_return true;
 		}
 
 		// Function performs harmonic analysis on input signal and calls the callback function

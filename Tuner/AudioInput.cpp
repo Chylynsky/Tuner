@@ -18,7 +18,7 @@ namespace winrt::Tuner::implementation
 	IAsyncOperation<bool> AudioInput::InitializeAsync()
 	{
 		// Start async operation that creates new audio graph
-		CreateAudioGraphResult graphCreation = co_await AudioGraph::CreateAsync(audioSettings);
+		CreateAudioGraphResult graphCreation = co_await AudioGraph::CreateAsync(m_audioSettings);
 
 		// Check if succesfully created
 		if (graphCreation.Status() != AudioGraphCreationStatus::Success) 
@@ -28,13 +28,13 @@ namespace winrt::Tuner::implementation
 		else 
 		{
 			// Get created graph
-			audioGraph = graphCreation.Graph();
+			m_audioGraph = graphCreation.Graph();
 			// Create output node for recorded data
-			frameOutputNode = audioGraph.CreateFrameOutputNode();
+			m_frameOutputNode = m_audioGraph.CreateFrameOutputNode();
 			// Attach callback
-			audioGraph.QuantumStarted({ this, &AudioInput::audioGraph_QuantumStarted });
+			m_audioGraph.QuantumStarted({ this, &AudioInput::audioGraph_QuantumStarted });
 			// Start audio input device node creation
-			CreateAudioDeviceInputNodeResult nodeCreation = co_await audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media);
+			CreateAudioDeviceInputNodeResult nodeCreation = co_await m_audioGraph.CreateDeviceInputNodeAsync(MediaCategory::Media);
 
 			// Check if succesful
 			if (nodeCreation.Status() != AudioDeviceNodeCreationStatus::Success) 
@@ -43,9 +43,9 @@ namespace winrt::Tuner::implementation
 			}
 			else 
 			{
-				inputDevice = nodeCreation.DeviceInputNode();
-				// Input from the recording device is routed to frameOutputNode
-				inputDevice.AddOutgoingConnection(frameOutputNode);
+				m_inputDevice = nodeCreation.DeviceInputNode();
+				// Input from the recording device is routed to m_frameOutputNode
+				m_inputDevice.AddOutgoingConnection(m_frameOutputNode);
 				co_return true;
 			}
 		}
@@ -54,7 +54,7 @@ namespace winrt::Tuner::implementation
 	// Handle QuantumStarted event
 	void AudioInput::audioGraph_QuantumStarted(AudioGraph const& sender, IInspectable const args)
 	{
-		AudioFrame frame = frameOutputNode.GetFrame();
+		AudioFrame frame = m_frameOutputNode.GetFrame();
 		AudioBuffer buffer = frame.LockBuffer(AudioBufferAccessMode::Read);
 		IMemoryBufferReference reference = buffer.CreateReference();
 
@@ -67,16 +67,16 @@ namespace winrt::Tuner::implementation
 
 		WINRT_ASSERT(byte);
 
-		auto bufferSpaceLeft = std::distance(current, last);
+		auto bufferSpaceLeft = std::distance(m_current, m_last);
 		
 		if (bufferSpaceLeft > buffer.Length())
 		{
-			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), current);
-			std::advance(current, buffer.Length() / sizeof(sample_t));
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + buffer.Length()), m_current);
+			std::advance(m_current, buffer.Length() / sizeof(sample_t));
 		}
 		else 
 		{
-			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + bufferSpaceLeft), current);
+			std::copy(reinterpret_cast<sample_t*>(byte), reinterpret_cast<sample_t*>(byte + bufferSpaceLeft), m_current);
 
 			RunCallbackAsync();
 			SwapBuffers();
@@ -85,40 +85,39 @@ namespace winrt::Tuner::implementation
 
 	void AudioInput::SwapBuffers()
 	{
-		sampleBufferQueue.push(sampleBufferPtr);
-		sampleBufferPtr = sampleBufferQueue.front();
-		sampleBufferQueue.pop();
-		first = current = sampleBufferPtr->begin();
-		last = sampleBufferPtr->end();
+		m_sampleBufferQueue.push(m_pSampleBuffer);
+		m_pSampleBuffer = m_sampleBufferQueue.front();
+		m_sampleBufferQueue.pop();
+		m_first = m_current = m_pSampleBuffer->begin();
+		m_last = m_pSampleBuffer->end();
 	}
 
 	AudioInput::AudioInput() : 
-		bufferFilledCallback	{ nullptr },
-		audioGraph				{ nullptr }, 
-		audioSettings			{ nullptr },
-		inputDevice				{ nullptr }, 
-		frameOutputNode			{ nullptr }
+		m_bufferFilledCallback	{ nullptr },
+		m_audioGraph			{ nullptr }, 
+		m_audioSettings			{ nullptr },
+		m_inputDevice			{ nullptr }, 
+		m_frameOutputNode		{ nullptr }
 	{
-		for (SampleBuffer& buffer : sampleBufferArray)
+		for (SampleBuffer& buffer : m_sampleBufferArray)
 		{
-			buffer.fill(0.0f);
-			sampleBufferQueue.push(&buffer);
+			m_sampleBufferQueue.push(&buffer);
 
 			/*
 				Push placeholder std::futures for async callback execution
 				for each sample buffer.
 			*/
-			asyncCallbackQueue.push(CallbackFuture());
+			m_asyncCallbackQueue.push(CallbackFuture());
 		}
 
 		// Prepare pointers and iterators for incoming data
-		sampleBufferPtr = sampleBufferQueue.front();
-		sampleBufferQueue.pop();
-		first = current = sampleBufferPtr->begin();
-		last = sampleBufferPtr->end();
+		m_pSampleBuffer = m_sampleBufferQueue.front();
+		m_sampleBufferQueue.pop();
+		m_first = m_current = m_pSampleBuffer->begin();
+		m_last = m_pSampleBuffer->end();
 
 		// Fill audio settings
-		audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
-		audioSettings.DesiredRenderDeviceAudioProcessing(AudioProcessing::Raw);
+		m_audioSettings = AudioGraphSettings(AudioRenderCategory::Media);
+		m_audioSettings.DesiredRenderDeviceAudioProcessing(AudioProcessing::Raw);
 	}
 }

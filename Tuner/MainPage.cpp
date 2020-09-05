@@ -52,7 +52,7 @@ namespace winrt::Tuner::implementation
 	{
 		co_await SetStateAsync(MainPageState::Loading);
 
-		bool initResult = co_await InitializeFunctionality();
+		bool initResult = co_await InitializeAsync();
 
 		if (!initResult) 
 		{
@@ -67,7 +67,7 @@ namespace winrt::Tuner::implementation
 
 	}
 
-	IAsyncOperation<bool> MainPage::InitializeFunctionality()
+	IAsyncOperation<bool> MainPage::InitializeAsync()
 	{
 		bool initStatus = co_await m_audioInput.InitializeAsync();
 
@@ -83,7 +83,12 @@ namespace winrt::Tuner::implementation
 			SoundAnalyzed_Callback(note, frequency, cents); 
 		});
 
-		co_await m_pitchAnalyzer.InitializeAsync();
+		initStatus = co_await m_pitchAnalyzer.InitializeAsync();
+
+		if (!initStatus)
+		{
+			co_return false;
+		}
 
 		// Attach BufferFilled callback function
 		m_audioInput.BufferFilled([this](auto first, auto last) {
@@ -161,7 +166,8 @@ namespace winrt::Tuner::implementation
 	{
 		co_await resume_foreground(Note_TextBlock().Dispatcher());
 
-		switch (state) {
+		switch (state) 
+		{
 		case MainPageState::Loading:
 			LoadingScreen().Visibility(Visibility::Visible);
 			TuningScreen().Visibility(Visibility::Collapsed);

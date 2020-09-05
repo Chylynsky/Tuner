@@ -26,23 +26,23 @@ namespace winrt::Tuner::implementation
 	private:
 
 		// BufferFilled event handler
-		BufferFilledCallback	bufferFilledCallback;
+		BufferFilledCallback	m_bufferFilledCallback;
 		// Keep std::futures with asynchronously running callbacks in a queue form
-		AsyncCallbackQueue		asyncCallbackQueue;
+		AsyncCallbackQueue		m_asyncCallbackQueue;
 
-		winrt::Windows::Media::Audio::AudioGraph			audioGraph;
-		winrt::Windows::Media::Audio::AudioGraphSettings	audioSettings;
-		winrt::Windows::Media::Audio::AudioDeviceInputNode	inputDevice;
-		winrt::Windows::Media::Audio::AudioFrameOutputNode	frameOutputNode;
+		winrt::Windows::Media::Audio::AudioGraph			m_audioGraph;
+		winrt::Windows::Media::Audio::AudioGraphSettings	m_audioSettings;
+		winrt::Windows::Media::Audio::AudioDeviceInputNode	m_inputDevice;
+		winrt::Windows::Media::Audio::AudioFrameOutputNode	m_frameOutputNode;
 
-		SampleBufferArray	sampleBufferArray;
-		SampleBufferQueue	sampleBufferQueue;
-		SampleBuffer*		sampleBufferPtr;
+		SampleBufferArray	m_sampleBufferArray;
+		SampleBufferQueue	m_sampleBufferQueue;
+		SampleBuffer*		m_pSampleBuffer;
 
 		// Helper iterators
-		BufferIterator first;
-		BufferIterator last;
-		BufferIterator current;
+		BufferIterator m_first;
+		BufferIterator m_last;
+		BufferIterator m_current;
 
 		void audioGraph_QuantumStarted(winrt::Windows::Media::Audio::AudioGraph const& sender, winrt::Windows::Foundation::IInspectable const args);
 		void SwapBuffers();
@@ -69,39 +69,39 @@ namespace winrt::Tuner::implementation
 
 	inline void AudioInput::RunCallbackAsync()
 	{
-		asyncCallbackQueue.pop();
-		asyncCallbackQueue.push(std::async(
+		m_asyncCallbackQueue.pop();
+		m_asyncCallbackQueue.push(std::async(
 			std::launch::async,
 			[this]() {
-				bufferFilledCallback(sampleBufferPtr->begin(), sampleBufferPtr->end());
+				m_bufferFilledCallback(m_pSampleBuffer->begin(), m_pSampleBuffer->end());
 			})
 		);
 	}
 
 	inline void AudioInput::Start() const
 	{
-		audioGraph.Start();
+		m_audioGraph.Start();
 	}
 
 	inline void AudioInput::Stop() const
 	{
-		audioGraph.Stop();
+		m_audioGraph.Stop();
 	}
 
 	inline void AudioInput::BufferFilled(BufferFilledCallback callback) noexcept
 	{
-		this->bufferFilledCallback = callback;
+		this->m_bufferFilledCallback = callback;
 	}
 
 	// Get current sample rate
 	inline uint32_t AudioInput::GetSampleRate() const noexcept
 	{
-		return inputDevice.EncodingProperties().SampleRate();
+		return m_inputDevice.EncodingProperties().SampleRate();
 	}
 
 	// Get current bit depth
 	inline uint32_t AudioInput::GetBitDepth() const
 	{
-		return inputDevice.EncodingProperties().BitsPerSample();
+		return m_inputDevice.EncodingProperties().BitsPerSample();
 	}
 }
